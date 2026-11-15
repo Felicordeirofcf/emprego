@@ -255,7 +255,7 @@ No Windows, use o **Agendador de Tarefas** apontando para `.venv\Scripts\python.
 | `UF_PRESENCIAL` / `ESTADO_PRESENCIAL` | `RJ` / `Rio de Janeiro` | Região aceita para presencial/híbrido |
 | `FONTES_ATIVAS` | `github,gupy` | Fontes habilitadas |
 | `GITHUB_REPOS` | 3 repositórios | Repositórios de vagas no GitHub |
-| `GUPY_TERMOS` | 6 termos | Buscas na Gupy, separadas por `;` |
+| `GUPY_TERMOS` | 14 termos de tecnologia | Buscas na Gupy, separadas por `;` (o filtro de estágio é automático) |
 
 ---
 

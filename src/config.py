@@ -84,8 +84,10 @@ class Settings:
     gupy_termos: list[str] = field(
         default_factory=lambda: _list(
             "GUPY_TERMOS",
-            "estágio desenvolvimento;estágio software;estágio full stack;"
-            "estágio python;estágio node;estágio react",
+            # O filtro de estágio é aplicado no servidor (type=vacancy_type_internship)
+            # e de novo localmente, então os termos podem ser só a área/tecnologia.
+            "desenvolvimento;desenvolvedor;software;programação;sistemas;dados;python;"
+            "javascript;react;node;full stack;front-end;back-end;tecnologia",
             sep=";",
         )
     )
