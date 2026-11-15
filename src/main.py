@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -20,7 +21,13 @@ from dataclasses import dataclass
 import anthropic
 
 from . import prefiltro
-from .claude_matcher import AnaliseError, ClaudeMatcher, carregar_perfil, perfil_eh_exemplo
+from .claude_matcher import (
+    AnaliseError,
+    ClaudeMatcher,
+    CreditoInsuficienteError,
+    carregar_perfil,
+    perfil_eh_exemplo,
+)
 from .config import Settings, get_settings
 from .dashboard import gerar_dashboard
 from .database import (
@@ -38,6 +45,13 @@ from .scrapers import criar_scrapers
 log = logging.getLogger("robo")
 
 SEP = "─" * 64
+
+
+def anotar_erro(titulo: str, mensagem: str) -> None:
+    """Erro no log e, no GitHub Actions, também como anotação no topo da execução."""
+    log.error("%s: %s", titulo, mensagem)
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        print(f"::error title={titulo}::{mensagem}", flush=True)
 
 
 def configurar_logs(nivel: str) -> None:
@@ -236,9 +250,17 @@ def main(argv: list[str] | None = None) -> int:
             args.apenas_coleta = True
     except (FileNotFoundError, json.JSONDecodeError):
         pass  # tratado logo abaixo
+    codigo_saida = 0
     if not args.apenas_coleta and not settings.anthropic_api_key:
-        log.error("ANTHROPIC_API_KEY não definida. Configure o .env ou use --apenas-coleta.")
-        return 2
+        # Coleta e atualiza o painel mesmo assim, mas a execução termina com erro para chamar atenção.
+        anotar_erro(
+            "ANTHROPIC_API_KEY não encontrada",
+            "Crie um REPOSITORY secret (Settings > Secrets and variables > Actions > New repository secret) "
+            "chamado ANTHROPIC_API_KEY. Secrets de environment não chegam a este workflow. "
+            "Nesta execução o robô só coletou vagas, sem análise.",
+        )
+        args.apenas_coleta = True
+        codigo_saida = 2
     try:
         perfil = carregar_perfil(settings.perfil_path)
     except (FileNotFoundError, json.JSONDecodeError) as exc:
@@ -249,8 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     Session = criar_session_factory(engine)
     c = Contadores()
     uso = UsoTokens()
-    codigo_saida = 0
-    observacoes: list[str] = []
+    observacoes: list[str] = ["ANTHROPIC_API_KEY ausente: só coleta"] if codigo_saida == 2 else []
 
     with Session() as session:
         repo = Repositorio(session)
@@ -273,8 +294,20 @@ def main(argv: list[str] | None = None) -> int:
                 limite = args.max_vagas or settings.max_vagas_por_execucao
                 try:
                     etapa_analise(repo, session, matcher, settings, limite, c, uso)
+                except CreditoInsuficienteError:
+                    anotar_erro("Sem créditos na Anthropic",
+                                "A conta da API está sem saldo. Adicione créditos em console.anthropic.com "
+                                "(Settings > Billing). As vagas continuam na fila para a próxima execução.")
+                    observacoes.append("Conta da Anthropic sem créditos")
+                    codigo_saida = 2
+                except anthropic.PermissionDeniedError as exc:
+                    anotar_erro("Sem permissão na API da Anthropic (403)", str(exc)[:300])
+                    observacoes.append("Permissão negada na Anthropic")
+                    codigo_saida = 2
                 except anthropic.AuthenticationError:
-                    log.error("ANTHROPIC_API_KEY inválida (401). Análise interrompida.")
+                    anotar_erro("ANTHROPIC_API_KEY inválida (401)",
+                                "A Anthropic recusou a chave. Gere uma nova em console.anthropic.com e "
+                                "atualize o repository secret ANTHROPIC_API_KEY.")
                     observacoes.append("Falha de autenticação na Anthropic")
                     codigo_saida = 2
                 etapa_notificacao(repo, session, settings, args.dry_run, c)

@@ -62,6 +62,15 @@ class AnaliseError(RuntimeError):
     """Falha ao analisar uma vaga (a vaga fica marcada como erro e é re-tentada depois)."""
 
 
+class CreditoInsuficienteError(RuntimeError):
+    """Conta da Anthropic sem créditos: erro fatal, a análise para (as vagas seguem na fila)."""
+
+
+def _eh_falta_de_credito(exc: Exception) -> bool:
+    texto = str(exc).lower()
+    return "credit balance" in texto or "billing" in texto
+
+
 # ---------------------------------------------------------------------------
 # Tool (JSON Schema estrito). A ordem dos campos importa: o modelo raciocina
 # sobre elegibilidade, match e lacunas ANTES de dar o score.
@@ -436,14 +445,16 @@ class ClaudeMatcher:
         try:
             resp = self._criar_triagem(modelo, conteudo)
         except anthropic.BadRequestError as exc:
+            if _eh_falta_de_credito(exc):
+                raise CreditoInsuficienteError(str(exc)) from exc
             if self._usar_strict and "strict" in str(exc).lower():
                 log.warning("Modelo %s não aceitou tool strict; repetindo sem strict.", modelo)
                 self._usar_strict = False
                 resp = self._criar_triagem(modelo, conteudo)
             else:
                 raise AnaliseError(f"Requisição inválida (400): {exc}") from exc
-        except anthropic.AuthenticationError:
-            raise  # erro fatal: o orquestrador encerra a execução
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError):
+            raise  # erro fatal: o orquestrador encerra a análise
         except anthropic.RateLimitError as exc:
             raise AnaliseError(f"Rate limit da Anthropic persistiu após retries: {exc}") from exc
         except anthropic.APIStatusError as exc:
@@ -520,8 +531,12 @@ class ClaudeMatcher:
                 resp = self.client.beta.messages.create(**params, betas=[BETA_FALLBACK], fallbacks="default")
             else:
                 resp = self.client.messages.create(**params)
-        except anthropic.AuthenticationError:
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError):
             raise
+        except anthropic.BadRequestError as exc:
+            if _eh_falta_de_credito(exc):
+                raise CreditoInsuficienteError(str(exc)) from exc
+            raise AnaliseError(f"Falha ao gerar pitch com {modelo}: {exc}") from exc
         except anthropic.APIError as exc:
             raise AnaliseError(f"Falha ao gerar pitch com {modelo}: {exc}") from exc
 

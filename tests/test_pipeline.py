@@ -90,3 +90,22 @@ def test_perfil_exemplo_so_coleta(settings, monkeypatch, tmp_path):
     monkeypatch.setattr(main_mod, "criar_scrapers", lambda s, f=None: [FonteFake(s, http=HttpFake())])
     monkeypatch.setattr(main_mod, "ClaudeMatcher", nao_chamar)
     assert main_mod.main([]) == 0
+
+
+def test_sem_chave_coleta_e_sai_com_erro(settings, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    class HttpFake:
+        def close(self):
+            pass
+
+    def nao_chamar(*a, **k):
+        raise AssertionError("Claude não deve ser chamado sem chave")
+
+    monkeypatch.setattr(main_mod, "criar_scrapers", lambda s, f=None: [FonteFake(s, http=HttpFake())])
+    monkeypatch.setattr(main_mod, "ClaudeMatcher", nao_chamar)
+    assert main_mod.main([]) == 2
+    engine = criar_engine(settings.database_path)
+    with criar_session_factory(engine)() as s:
+        assert len(list(Repositorio(s).todas_vagas())) == 4  # coletou mesmo assim
+    assert settings.dashboard_path.exists()

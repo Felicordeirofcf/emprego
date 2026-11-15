@@ -146,3 +146,15 @@ def test_calculo_de_custo():
     assert uso.economia_usd == pytest.approx(0.09)
     uso = calcular_uso("claude-sonnet-5-5", U())
     assert uso.custo_usd == pytest.approx(2.0 + 0.10)
+
+
+def test_falta_de_credito_e_fatal(settings, perfil):
+    import httpx2
+    from src.claude_matcher import CreditoInsuficienteError
+    req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    resp = httpx2.Response(400, request=req, json={"type": "error", "error": {"type": "invalid_request_error",
+                           "message": "Your credit balance is too low to access the Anthropic API."}})
+    erro = anthropic.BadRequestError("Your credit balance is too low to access the Anthropic API.", response=resp, body=None)
+    m = _matcher(settings, perfil, [erro])
+    with pytest.raises(CreditoInsuficienteError):
+        m.analisar(nova_vaga())
