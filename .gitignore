@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.db-journal
+*.db-wal
+*.db-shm
+# vagas.db e docs/index.html SÃO versionados de propósito (histórico + GitHub Pages)

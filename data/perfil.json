@@ -1,0 +1,181 @@
+{
+  "_exemplo": true,
+  "_instrucoes": "Substitua TODOS os valores de exemplo pelos seus dados reais e APAGUE a linha \"_exemplo\": true. Enquanto ela existir, o robô só coleta vagas (não chama o Claude nem notifica), para nunca gerar pitch com projetos fictícios. Quanto mais detalhado (principalmente em 'projetos_portfolio'), melhor o match e o pitch. Este arquivo vai inteiro para o prompt do Claude (com prompt caching), então não coloque CPF, endereço completo ou senhas.",
+  "dados_pessoais": {
+    "nome": "Felipe Cordeiro Ferreira",
+    "cidade": "Rio de Janeiro",
+    "uf": "RJ",
+    "bairro_ou_regiao": "Zona Norte",
+    "linkedin": "https://www.linkedin.com/in/seu-usuario",
+    "github": "https://github.com/Felicordeirofcf",
+    "portfolio": "https://seu-portfolio.vercel.app",
+    "pode_mudar_de_cidade": false
+  },
+  "formacao": {
+    "curso": "Análise e Desenvolvimento de Sistemas (ADS)",
+    "grau": "Tecnólogo",
+    "instituicao": "Nome da Faculdade",
+    "modalidade_curso": "EAD",
+    "periodo_atual": 3,
+    "total_periodos": 5,
+    "situacao": "Cursando",
+    "inicio": "2025-02",
+    "previsao_formatura": "2027-07",
+    "turno": "Noite",
+    "matricula_ativa": true,
+    "disciplinas_relevantes_concluidas": [
+      "Lógica de Programação e Algoritmos",
+      "Programação Orientada a Objetos",
+      "Banco de Dados Relacional e SQL",
+      "Engenharia de Software e Métodos Ágeis",
+      "Desenvolvimento Web",
+      "Estruturas de Dados",
+      "Redes de Computadores"
+    ]
+  },
+  "disponibilidade": {
+    "carga_horaria_semanal": 30,
+    "carga_horaria_diaria": 6,
+    "turnos_disponiveis": ["Manhã", "Tarde"],
+    "inicio_imediato": true,
+    "observacao": "Disponível para estágio de 20h a 30h semanais conforme Lei 11.788/2008."
+  },
+  "preferencias": {
+    "tipo_vaga": "Estágio",
+    "modalidades_aceitas": ["Remoto (qualquer lugar do Brasil)", "Híbrido no Rio de Janeiro - RJ", "Presencial no Rio de Janeiro - RJ"],
+    "areas_interesse": ["Desenvolvimento Full Stack", "Back-end", "Front-end", "Automação e Integrações", "Dados / Engenharia de Dados"],
+    "areas_menos_interesse": ["Suporte técnico N1", "QA exclusivamente manual", "Infraestrutura física / hardware"],
+    "bolsa_minima_desejada_brl": 1200,
+    "beneficios_valorizados": ["Vale-transporte", "Mentoria técnica", "Possibilidade de efetivação"]
+  },
+  "stack_tecnica": {
+    "linguagens": [
+      {"nome": "TypeScript", "nivel": "Intermediário", "tempo_uso": "1,5 ano", "uso_em_producao": true},
+      {"nome": "JavaScript", "nivel": "Intermediário", "tempo_uso": "2 anos", "uso_em_producao": true},
+      {"nome": "Python", "nivel": "Intermediário", "tempo_uso": "1 ano", "uso_em_producao": true},
+      {"nome": "SQL", "nivel": "Intermediário", "tempo_uso": "1,5 ano", "uso_em_producao": true},
+      {"nome": "HTML/CSS", "nivel": "Avançado", "tempo_uso": "2 anos", "uso_em_producao": true}
+    ],
+    "frontend": ["React", "Next.js (App Router)", "Tailwind CSS", "shadcn/ui", "React Hook Form", "Zod", "TanStack Query"],
+    "backend": ["Node.js", "Express", "NestJS (básico)", "Next.js API Routes / Server Actions", "FastAPI", "REST", "Webhooks", "JWT / OAuth2"],
+    "bancos_de_dados": ["PostgreSQL", "MySQL", "SQLite", "Prisma ORM", "SQLAlchemy", "Redis (cache e filas, básico)", "Supabase"],
+    "devops_e_cloud": ["Docker", "Docker Compose", "GitHub Actions (CI/CD)", "Vercel", "Railway", "Linux (terminal, SSH, Nginx básico)"],
+    "integracoes_e_apis": ["Stripe (pagamentos e webhooks)", "Mercado Pago", "API do WhatsApp Business / Evolution API", "Google Sheets API", "Resend / SMTP", "Anthropic Claude API"],
+    "testes_e_qualidade": ["Jest", "Vitest", "Pytest", "ESLint", "Prettier", "Code review via Pull Requests"],
+    "ferramentas": ["Git", "GitHub", "VS Code", "Postman / Insomnia", "Figma (leitura de layouts)", "Notion", "Trello / Jira"],
+    "conceitos": ["Clean Code", "MVC", "Arquitetura em camadas", "Modelagem relacional e normalização", "Autenticação e autorização", "Multi-tenancy", "Idempotência em webhooks", "Scrum/Kanban"]
+  },
+  "projetos_portfolio": [
+    {
+      "nome": "AgendaPro — SaaS de agendamento para clínicas e salões",
+      "tipo": "SaaS Full Stack multi-tenant",
+      "status": "Em produção",
+      "periodo": "2025-03 até hoje",
+      "url": "https://agendapro-exemplo.com.br",
+      "repositorio": "https://github.com/seu-usuario/agendapro (privado — demo sob demanda)",
+      "papel": "Desenvolvedor full stack único (do levantamento de requisitos ao deploy)",
+      "problema_resolvido": "Pequenos negócios perdiam clientes por agendamento manual via WhatsApp e não controlavam faltas nem pagamentos.",
+      "descricao": "Plataforma web onde o negócio cadastra serviços, profissionais e horários; o cliente final agenda por um link público, recebe confirmação e lembrete automático por WhatsApp e pode pagar o sinal online.",
+      "stack": ["Next.js 14", "TypeScript", "React", "Tailwind", "Node.js", "PostgreSQL", "Prisma", "Stripe", "Docker", "Vercel", "Railway"],
+      "responsabilidades": [
+        "Modelagem do banco relacional multi-tenant (tenants, usuários, serviços, agenda, pagamentos)",
+        "Autenticação com papéis (dono, funcionário, cliente)",
+        "Integração com Stripe Checkout e tratamento idempotente de webhooks de pagamento",
+        "Fila simples para lembretes por WhatsApp 24h antes do horário",
+        "Deploy com Docker, variáveis de ambiente e CI no GitHub Actions"
+      ],
+      "resultados_metricas": [
+        "8 empresas pagantes e cerca de 1.200 agendamentos por mês",
+        "Redução de aproximadamente 35% nas faltas dos clientes com os lembretes automáticos",
+        "Uptime acima de 99% nos últimos 6 meses"
+      ],
+      "destaques_tecnicos": ["Webhooks idempotentes", "Multi-tenancy por tenant_id com índices compostos", "Testes de integração das rotas de pagamento"]
+    },
+    {
+      "nome": "ZapFlow — Automação de atendimento e integração via webhooks",
+      "tipo": "Automação / Integração de APIs",
+      "status": "Em produção",
+      "periodo": "2025-07 até hoje",
+      "url": null,
+      "repositorio": "https://github.com/seu-usuario/zapflow",
+      "papel": "Desenvolvedor back-end",
+      "problema_resolvido": "Loja online respondia manualmente dúvidas repetidas e copiava pedidos para planilha.",
+      "descricao": "Serviço Node.js que recebe webhooks do WhatsApp e da plataforma de e-commerce, responde perguntas frequentes, registra pedidos no PostgreSQL e sincroniza um resumo diário no Google Sheets.",
+      "stack": ["Node.js", "TypeScript", "Express", "PostgreSQL", "Redis", "Google Sheets API", "Docker"],
+      "responsabilidades": [
+        "Endpoints de webhook com validação de assinatura e retry com backoff",
+        "Fila em Redis para processar mensagens sem perder eventos em picos",
+        "Rotina agendada (cron) de sincronização com Google Sheets",
+        "Logs estruturados e alertas de erro no Telegram"
+      ],
+      "resultados_metricas": [
+        "Cerca de 70% das dúvidas respondidas automaticamente",
+        "Eliminou aproximadamente 6 horas semanais de digitação manual"
+      ],
+      "destaques_tecnicos": ["Validação HMAC de webhooks", "Processamento assíncrono com fila", "Containers com Docker Compose"]
+    },
+    {
+      "nome": "FinDash — Dashboard financeiro com ETL em Python",
+      "tipo": "Dados / Automação",
+      "status": "Em produção (uso interno de um cliente)",
+      "periodo": "2025-10 até hoje",
+      "url": null,
+      "repositorio": "https://github.com/seu-usuario/findash",
+      "papel": "Desenvolvedor de dados",
+      "problema_resolvido": "Pequena empresa consolidava extratos de 3 bancos e do sistema de vendas em planilhas manualmente todo mês.",
+      "descricao": "Pipeline ETL em Python que importa extratos (CSV/OFX) e dados de vendas via API, normaliza, grava no PostgreSQL e alimenta um dashboard web com indicadores de fluxo de caixa.",
+      "stack": ["Python", "FastAPI", "Pandas", "SQLAlchemy", "PostgreSQL", "React", "Recharts", "Docker", "GitHub Actions"],
+      "responsabilidades": [
+        "Scripts de ETL com validação e deduplicação de lançamentos",
+        "API REST em FastAPI para o front consumir",
+        "Agendamento diário via GitHub Actions",
+        "Testes com Pytest para as regras de conciliação"
+      ],
+      "resultados_metricas": [
+        "Fechamento mensal caiu de 2 dias para cerca de 1 hora",
+        "Conciliação automática de mais de 95% dos lançamentos"
+      ],
+      "destaques_tecnicos": ["Modelagem dimensional simples", "Consultas SQL com window functions", "Testes automatizados"]
+    },
+    {
+      "nome": "Robô de Vagas de Estágio com IA",
+      "tipo": "Automação com LLM",
+      "status": "Em produção (uso pessoal)",
+      "periodo": "2026",
+      "url": null,
+      "repositorio": "https://github.com/seu-usuario/robo-vagas-estagio",
+      "papel": "Autor",
+      "problema_resolvido": "Encontrar vagas de estágio aderentes sem olhar vários sites todos os dias.",
+      "descricao": "Robô que coleta vagas (GitHub e Gupy), usa a API do Claude com tool use e prompt caching para calcular aderência ao perfil e notifica no Telegram; roda no GitHub Actions com SQLite e dashboard estático.",
+      "stack": ["Python", "Anthropic Claude API", "SQLAlchemy", "SQLite", "httpx", "GitHub Actions", "Telegram Bot API"],
+      "responsabilidades": ["Arquitetura extensível de scrapers", "Saída estruturada com JSON Schema", "Controle de custo de tokens"],
+      "resultados_metricas": ["Execução automática a cada 6 horas com custo de centavos por dia"],
+      "destaques_tecnicos": ["Prompt caching", "Tool use com schema estrito", "CI/CD agendado"]
+    }
+  ],
+  "experiencia_profissional": [
+    {
+      "cargo": "Desenvolvedor freelancer",
+      "empresa": "Autônomo",
+      "periodo": "2025-03 até hoje",
+      "descricao": "Desenvolvimento e manutenção dos sistemas listados no portfólio para pequenos negócios, com contato direto com o cliente, levantamento de requisitos e suporte pós-entrega."
+    }
+  ],
+  "certificacoes_e_cursos": [
+    "Curso de React e Next.js (plataforma online) — 2025",
+    "Curso de Python para Dados — 2025",
+    "Docker para Desenvolvedores — 2025"
+  ],
+  "idiomas": [
+    {"idioma": "Português", "nivel": "Nativo"},
+    {"idioma": "Inglês", "nivel": "Intermediário (leitura técnica fluente, conversação em desenvolvimento)"}
+  ],
+  "soft_skills": ["Autonomia", "Comunicação com cliente", "Aprendizado rápido", "Organização", "Responsabilidade com prazos"],
+  "diferenciais": [
+    "Já tenho sistemas reais em produção com clientes pagantes, não apenas projetos de curso",
+    "Experiência ponta a ponta: requisitos, modelagem de banco, back-end, front-end, deploy e suporte",
+    "Vivência prática com integrações de pagamento, webhooks e automações",
+    "Uso responsável de IA generativa em produtos (Claude API)"
+  ],
+  "pontos_a_desenvolver": ["Java/Spring", "Kubernetes", "Testes end-to-end", "Cloud AWS/Azure em profundidade", "Inglês conversacional"]
+}

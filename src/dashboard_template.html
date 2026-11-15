@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Robô de Vagas de Estágio · Dashboard</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface-1: #fcfcfb; --surface-2: #f3f2ee;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #eb6834;
+    --seq-1: #1c5cab; --seq-2: #2a78d6; --seq-3: #5598e7; --seq-4: #86b6ef;
+    --good: #006300; --critical: #d03b3b; --link: #1c5cab;
+    --chip: #eef4fc; --chip-gap: #fdf0ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19; --surface-2: #232321;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --series-2: #d95926;
+      --seq-1: #86b6ef; --seq-2: #5598e7; --seq-3: #3987e5; --seq-4: #256abf;
+      --good: #0ca30c; --critical: #e66767; --link: #86b6ef;
+      --chip: #1d2a3a; --chip-gap: #3a2419;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19; --surface-2: #232321;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #d95926;
+    --seq-1: #86b6ef; --seq-2: #5598e7; --seq-3: #3987e5; --seq-4: #256abf;
+    --good: #0ca30c; --critical: #e66767; --link: #86b6ef;
+    --chip: #1d2a3a; --chip-gap: #3a2419;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  .viz-root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page); color: var(--text-primary);
+    min-height: 100vh; padding: 24px clamp(12px, 3vw, 40px) 48px; font-size: 14px; line-height: 1.45;
+  }
+  a { color: var(--link); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; font-weight: 650; }
+  h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+  .sub { color: var(--text-secondary); font-size: 13px; }
+  .muted { color: var(--text-muted); }
+  button, select, input[type="search"] {
+    font: inherit; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: var(--surface-2); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi .label { color: var(--text-secondary); font-size: 12.5px; }
+  .kpi .value { font-size: 28px; font-weight: 650; margin-top: 4px; }
+  .kpi .hint { color: var(--text-muted); font-size: 12px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .filters label { display: inline-flex; gap: 6px; align-items: center; color: var(--text-secondary); font-size: 13px; }
+  .filters input[type="search"] { min-width: 220px; flex: 1 1 220px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 12px; margin-bottom: 16px; }
+  .chart-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 8px; }
+  .legend { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { fill: var(--text-secondary); font-size: 11px; font-family: inherit; }
+  svg .val { fill: var(--text-primary); font-variant-numeric: tabular-nums; }
+  svg .grid-line { stroke: var(--grid); stroke-width: 1; }
+  svg .axis-line { stroke: var(--axis); stroke-width: 1; }
+  svg .hit { fill: transparent; cursor: default; }
+  .empty { color: var(--text-muted); padding: 24px 0; text-align: center; }
+  #tooltip {
+    position: fixed; pointer-events: none; z-index: 10; display: none;
+    background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; max-width: 280px;
+  }
+  #tooltip b { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+  th { font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+  th.sortable { cursor: pointer; user-select: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.vaga-row { cursor: pointer; }
+  tr.vaga-row:hover td { background: var(--surface-2); }
+  .score { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 64px; }
+  .score b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .meter { width: 56px; height: 4px; border-radius: 2px; background: var(--grid); overflow: hidden; }
+  .meter span { display: block; height: 100%; background: var(--series-1); border-radius: 0 2px 2px 0; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); white-space: nowrap; }
+  .tag.ok { color: var(--good); border-color: currentColor; }
+  .tag.no { color: var(--critical); border-color: currentColor; }
+  .titulo a { font-weight: 600; text-decoration: none; }
+  .titulo a:hover { text-decoration: underline; }
+  .details td { background: var(--surface-2); }
+  .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--chip); }
+  .chip.gap { background: var(--chip-gap); }
+  .pitch { white-space: pre-wrap; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
+  .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 8px 0 10px; flex-wrap: wrap; }
+  .table-wrap { overflow-x: auto; }
+  footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (forced-colors: active) { .meter span { background: CanvasText; } }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <header>
+    <div>
+      <h1>🤖 Robô de Vagas de Estágio</h1>
+      <div class="sub" id="subtitulo"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="btn-tema" type="button" aria-label="Alternar tema claro/escuro">◐ Tema</button>
+    </div>
+  </header>
+
+  <div id="aviso" class="card" role="note" hidden style="margin-bottom:16px;border-color:var(--series-2)"></div>
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <section class="filters card" aria-label="Filtros">
+    <input type="search" id="f-busca" placeholder="Buscar por título, empresa ou tecnologia…" aria-label="Buscar">
+    <label>Período
+      <select id="f-periodo">
+        <option value="7">7 dias</option>
+        <option value="30" selected>30 dias</option>
+        <option value="90">90 dias</option>
+        <option value="0">Tudo</option>
+      </select>
+    </label>
+    <label>Fonte <select id="f-fonte"><option value="">Todas</option></select></label>
+    <label>Modalidade
+      <select id="f-modalidade">
+        <option value="">Todas</option><option value="remoto">Remoto</option>
+        <option value="hibrido">Híbrido</option><option value="presencial">Presencial</option>
+        <option value="nao_informado">Não informado</option>
+      </select>
+    </label>
+    <label>Minha etapa <select id="f-etapa"><option value="">Todas</option></select></label>
+    <label>Score ≥ <input type="range" id="f-score" min="0" max="100" step="5" value="0" aria-label="Score mínimo"><b id="f-score-v">0</b></label>
+    <label><input type="checkbox" id="f-elegiveis" checked> Só elegíveis</label>
+  </section>
+
+  <section class="grid">
+    <div class="card"><div class="chart-head"><div><h2>Funil de acompanhamento</h2><div class="sub">Da coleta às suas candidaturas</div></div></div><div id="c-funil"></div></div>
+    <div class="card"><div class="chart-head"><div><h2>Distribuição de score</h2><div class="sub">Vagas elegíveis analisadas pelo Claude</div></div></div><div id="c-hist"></div></div>
+    <div class="card"><div class="chart-head"><div><h2>Vagas por execução</h2><div class="sub">Novas x aprovadas a cada rodada</div></div><div class="legend" id="l-exec"></div></div><div id="c-exec"></div></div>
+    <div class="card"><div class="chart-head"><div><h2>Custo por execução (US$)</h2><div class="sub" id="s-custo"></div></div></div><div id="c-custo"></div></div>
+    <div class="card"><div class="chart-head"><div><h2>Tecnologias com mais match</h2><div class="sub">Seus pontos fortes que o mercado pede</div></div></div><div id="c-match"></div></div>
+    <div class="card"><div class="chart-head"><div><h2>Lacunas mais frequentes</h2><div class="sub">O que estudar a seguir</div></div></div><div id="c-lacunas"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">
+      <h2>Vagas <span class="muted" id="t-contagem"></span></h2>
+      <span class="sub">Clique numa linha para ver análise, gaps e pitch. A coluna “Minha etapa” fica salva neste navegador.</span>
+    </div>
+    <div class="table-wrap">
+      <table id="tabela">
+        <thead><tr>
+          <th class="sortable num" data-sort="score">Score ▾</th>
+          <th>Vaga</th>
+          <th>Modalidade</th>
+          <th>Fonte</th>
+          <th class="sortable" data-sort="publicada_em">Publicada</th>
+          <th>Telegram</th>
+          <th>Minha etapa</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <div class="section-title"><h2>Histórico de execuções</h2><span class="sub">Últimas 30</span></div>
+    <div class="table-wrap">
+      <table id="tabela-exec">
+        <thead><tr>
+          <th>Início</th><th class="num">Encontradas</th><th class="num">Novas</th><th class="num">Pré-filtro</th>
+          <th class="num">Analisadas</th><th class="num">Aprovadas</th><th class="num">Notificadas</th>
+          <th class="num">Erros</th><th class="num">Cache lido</th><th class="num">Custo</th><th class="num">Economia</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span id="rodape"></span>
+    <button type="button" id="btn-export">Exportar minhas etapas</button>
+    <label><button type="button" id="btn-import">Importar etapas</button><input type="file" id="in-import" accept="application/json" hidden></label>
+  </footer>
+  <div id="tooltip" role="status" aria-live="polite"></div>
+</div>
+
+<script id="dados" type="application/json">__DADOS_JSON__</script>
+<script>
+(() => {
+  "use strict";
+  const D = JSON.parse(document.getElementById("dados").textContent);
+  const MIN = D.min_score;
+  const LS_KEY = "robo-vagas:etapas";
+  const ETAPAS = [
+    ["nova", "Nova"], ["interesse", "Tenho interesse"], ["candidatei", "Candidatei"],
+    ["entrevista", "Entrevista"], ["proposta", "Proposta"], ["recusada", "Não avançou"], ["descartada", "Descartei"],
+  ];
+  const ROT_ETAPA = Object.fromEntries(ETAPAS);
+  const ROT_MOD = { remoto: "Remoto", hibrido: "Híbrido", presencial: "Presencial", nao_informado: "Não informado" };
+
+  // ---------- util ----------
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmtData = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—";
+  const fmtDataHora = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+  const fmtUSD = (v) => "US$ " + (v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  const fmtN = (v) => (v || 0).toLocaleString("pt-BR");
+  const SVGNS = "http://www.w3.org/2000/svg";
+
+  // localStorage pode estar bloqueado (iframe sandbox, modo privado): cai para memória.
+  const store = (() => {
+    const mem = {};
+    try { const k = "__t"; localStorage.setItem(k, "1"); localStorage.removeItem(k); return localStorage; }
+    catch { return { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } }; }
+  })();
+  let etapas = {};
+  try { etapas = JSON.parse(store.getItem(LS_KEY) || "{}"); } catch { etapas = {}; }
+  const salvarEtapas = () => store.setItem(LS_KEY, JSON.stringify(etapas));
+  const etapaDe = (id) => (etapas[id] && etapas[id].etapa) || "nova";
+
+  // ---------- tema ----------
+  const rootEl = document.documentElement;
+  const temaSalvo = store.getItem("robo-vagas:tema");
+  if (temaSalvo) rootEl.setAttribute("data-theme", temaSalvo);
+  $("#btn-tema").addEventListener("click", () => {
+    const atualEscuro = rootEl.getAttribute("data-theme") === "dark" ||
+      (!rootEl.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    const novo = atualEscuro ? "light" : "dark";
+    rootEl.setAttribute("data-theme", novo);
+    store.setItem("robo-vagas:tema", novo);
+  });
+
+  // ---------- tooltip ----------
+  const tip = $("#tooltip");
+  function mostrarTip(ev, html) {
+    tip.innerHTML = html; tip.style.display = "block";
+    const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = ev.clientX + pad, y = ev.clientY + pad;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - pad;
+    if (y + h > innerHeight - 8) y = ev.clientY - h - pad;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  const esconderTip = () => { tip.style.display = "none"; };
+
+  // ---------- primitivas SVG ----------
+  function el(tag, attrs = {}, parent) {
+    const n = document.createElementNS(SVGNS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function txt(parent, x, y, s, attrs = {}) { const t = el("text", { x, y, ...attrs }, parent); t.textContent = s; return t; }
+  // barra horizontal com ponta arredondada (4px) só na extremidade do dado
+  function hbarPath(x0, y, w, h, r = 4) {
+    r = Math.min(r, w, h / 2); const x1 = x0 + w;
+    return `M${x0},${y} H${x1 - r} Q${x1},${y} ${x1},${y + r} V${y + h - r} Q${x1},${y + h} ${x1 - r},${y + h} H${x0} Z`;
+  }
+  function vbarPath(x, yBase, w, h, r = 4) {
+    r = Math.min(r, h, w / 2); const yTop = yBase - h;
+    return `M${x},${yBase} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + w - r} Q${x + w},${yTop} ${x + w},${yTop + r} V${yBase} Z`;
+  }
+  function vazio(container, msg) { container.innerHTML = `<div class="empty">${esc(msg)}</div>`; }
+  // Máximo "redondo" do eixo com 4 intervalos; contagens só usam passos inteiros.
+  function niceMax(v, inteiro = true) {
+    if (!(v > 0)) return inteiro ? 4 : 1;
+    const bruto = v / 4, p = Math.pow(10, Math.floor(Math.log10(bruto)));
+    const passos = inteiro ? [1, 2, 5, 10] : [1, 2, 2.5, 5, 10];
+    let passo = passos.map((k) => k * p).find((k) => k >= bruto);
+    if (inteiro) passo = Math.max(1, Math.round(passo));
+    return passo * 4;
+  }
+
+  // Barras horizontais (ranking / funil)
+  function hbars(container, itens, { cor = "var(--series-1)", cores = null, labelW = 150, tipFn } = {}) {
+    container.innerHTML = "";
+    if (!itens.length) return vazio(container, "Sem dados para os filtros atuais.");
+    const W = 560, barH = 18, gap = 8, top = 4, right = 44;
+    const H = top + itens.length * (barH + gap);
+    const max = Math.max(...itens.map((i) => i.value), 1);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": container.dataset.titulo || "gráfico de barras" }, container);
+    const x0 = labelW, plotW = W - labelW - right;
+    el("line", { x1: x0, x2: x0, y1: 0, y2: H - gap / 2, class: "axis-line" }, svg);
+    itens.forEach((it, i) => {
+      const y = top + i * (barH + gap);
+      const w = Math.max(it.value > 0 ? 2 : 0, (it.value / max) * plotW);
+      const rotulo = it.label.length > 24 ? it.label.slice(0, 23) + "…" : it.label;
+      txt(svg, x0 - 8, y + barH / 2 + 4, rotulo, { "text-anchor": "end" });
+      if (w > 0) el("path", { d: hbarPath(x0 + 1, y, w, barH), fill: cores ? cores[i] : cor }, svg);
+      txt(svg, x0 + 1 + w + 6, y + barH / 2 + 4, fmtN(it.value), { class: "val" });
+      const hit = el("rect", { x: 0, y: y - gap / 2, width: W, height: barH + gap, class: "hit" }, svg);
+      hit.addEventListener("mousemove", (ev) => mostrarTip(ev, tipFn ? tipFn(it) : `<b>${esc(it.label)}</b><br>${fmtN(it.value)}`));
+      hit.addEventListener("mouseleave", esconderTip);
+    });
+  }
+
+  // Colunas verticais com eixo Y e linha de referência opcional
+  function columns(container, itens, { cor = "var(--series-1)", refX = null, refLabel = "", fmt = fmtN, inteiro = true, tipFn } = {}) {
+    container.innerHTML = "";
+    if (!itens.length || itens.every((i) => !i.value)) return vazio(container, "Sem dados ainda.");
+    const W = 560, H = 220, m = { t: 14, r: 8, b: 26, l: 44 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const max = niceMax(Math.max(...itens.map((i) => i.value)), inteiro);
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, container);
+    for (let k = 0; k <= 4; k++) {
+      const y = m.t + ph - (k / 4) * ph;
+      el("line", { x1: m.l, x2: W - m.r, y1: y, y2: y, class: k === 0 ? "axis-line" : "grid-line" }, svg);
+      txt(svg, m.l - 6, y + 4, fmt((max * k) / 4), { "text-anchor": "end" });
+    }
+    const slot = pw / itens.length, bw = Math.max(2, slot - 2);
+    const passo = Math.ceil(itens.length / 8);
+    itens.forEach((it, i) => {
+      const x = m.l + i * slot + 1, h = (it.value / max) * ph, base = m.t + ph;
+      if (h > 0) el("path", { d: vbarPath(x, base, bw, Math.max(h, 1)), fill: it.cor || cor }, svg);
+      if (i % passo === 0) txt(svg, x + bw / 2, H - 8, it.label, { "text-anchor": "middle" });
+      const hit = el("rect", { x: m.l + i * slot, y: m.t, width: slot, height: ph, class: "hit" }, svg);
+      hit.addEventListener("mousemove", (ev) => mostrarTip(ev, tipFn ? tipFn(it) : `<b>${esc(it.label)}</b><br>${fmt(it.value)}`));
+      hit.addEventListener("mouseleave", esconderTip);
+    });
+    if (refX !== null) {
+      const x = m.l + refX * slot;
+      el("line", { x1: x, x2: x, y1: m.t - 6, y2: m.t + ph, stroke: "var(--text-secondary)", "stroke-width": 1.5, "stroke-dasharray": "4 3" }, svg);
+      txt(svg, x + 4, m.t + 2, refLabel, { class: "val" });
+    }
+  }
+
+  // Linhas (2 séries) com crosshair + tooltip, legenda e rótulo direto no último ponto
+  function lines(container, legendaEl, labels, series) {
+    container.innerHTML = ""; legendaEl.innerHTML = "";
+    if (!labels.length) return vazio(container, "Nenhuma execução registrada ainda.");
+    series.forEach((s) => { legendaEl.insertAdjacentHTML("beforeend", `<span><i style="background:${s.cor}"></i>${esc(s.nome)}</span>`); });
+    const W = 560, H = 220, m = { t: 14, r: 70, b: 26, l: 36 };
+    const pw = W - m.l - m.r, ph = H - m.t - m.b;
+    const max = niceMax(Math.max(1, ...series.flatMap((s) => s.valores)));
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, container);
+    for (let k = 0; k <= 4; k++) {
+      const y = m.t + ph - (k / 4) * ph;
+      el("line", { x1: m.l, x2: m.l + pw, y1: y, y2: y, class: k === 0 ? "axis-line" : "grid-line" }, svg);
+      txt(svg, m.l - 6, y + 4, fmtN((max * k) / 4), { "text-anchor": "end" });
+    }
+    const n = labels.length;
+    const X = (i) => m.l + (n === 1 ? pw / 2 : (i / (n - 1)) * pw);
+    const Y = (v) => m.t + ph - (v / max) * ph;
+    const passo = Math.ceil(n / 7);
+    labels.forEach((l, i) => {
+      const ultimo = i === n - 1;
+      if ((i % passo === 0 && (ultimo || n - 1 - i >= passo)) || ultimo) txt(svg, X(i), H - 8, l, { "text-anchor": ultimo && n > 1 ? "end" : "middle" });
+    });
+    series.forEach((s) => {
+      el("path", { d: s.valores.map((v, i) => `${i ? "L" : "M"}${X(i)},${Y(v)}`).join(" "), fill: "none", stroke: s.cor, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+      if (n <= 40) s.valores.forEach((v, i) => el("circle", { cx: X(i), cy: Y(v), r: 3, fill: s.cor, stroke: "var(--surface-1)", "stroke-width": 2 }, svg));
+      const lv = s.valores[n - 1];
+      txt(svg, X(n - 1) + 8, Y(lv) + 4, `${s.nome} ${fmtN(lv)}`, { class: "val" });
+    });
+    const cross = el("line", { y1: m.t, y2: m.t + ph, stroke: "var(--axis)", "stroke-width": 1, visibility: "hidden" }, svg);
+    const hit = el("rect", { x: m.l, y: m.t, width: pw, height: ph, class: "hit" }, svg);
+    hit.addEventListener("mousemove", (ev) => {
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      const loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round(((loc.x - m.l) / pw) * (n - 1))));
+      cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
+      mostrarTip(ev, `<b>${esc(labels[i])}</b><br>` + series.map((s) => `<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${s.cor}"></i> ${esc(s.nome)}: <b>${fmtN(s.valores[i])}</b>`).join("<br>"));
+    });
+    hit.addEventListener("mouseleave", () => { cross.setAttribute("visibility", "hidden"); esconderTip(); });
+  }
+
+  // ---------- filtros ----------
+  const fontes = [...new Set(D.vagas.map((v) => v.fonte))].sort();
+  fontes.forEach((f) => $("#f-fonte").insertAdjacentHTML("beforeend", `<option value="${esc(f)}">${esc(f)}</option>`));
+  ETAPAS.forEach(([k, r]) => $("#f-etapa").insertAdjacentHTML("beforeend", `<option value="${k}">${esc(r)}</option>`));
+
+  let ordem = { campo: "score", desc: true };
+  const aberto = new Set();
+
+  function filtros() {
+    return {
+      busca: $("#f-busca").value.trim().toLowerCase(),
+      dias: Number($("#f-periodo").value),
+      fonte: $("#f-fonte").value,
+      modalidade: $("#f-modalidade").value,
+      etapa: $("#f-etapa").value,
+      score: Number($("#f-score").value),
+      elegiveis: $("#f-elegiveis").checked,
+    };
+  }
+  const dentroPeriodo = (iso, dias) => !dias || (iso && (Date.now() - new Date(iso).getTime()) <= dias * 864e5);
+
+  function vagasNoPeriodo(f) {
+    return D.vagas.filter((v) => dentroPeriodo(v.coletada_em, f.dias) && (!f.fonte || v.fonte === f.fonte) && (!f.modalidade || v.modalidade === f.modalidade));
+  }
+  function vagasFiltradas(f) {
+    return vagasNoPeriodo(f).filter((v) => {
+      if (f.elegiveis && v.elegivel !== true) return false;
+      if (f.score && (v.score ?? -1) < f.score) return false;
+      if (f.etapa && etapaDe(v.id) !== f.etapa) return false;
+      if (f.busca) {
+        const blob = [v.titulo, v.empresa, v.localizacao, ...(v.match || []), ...(v.lacunas || [])].join(" ").toLowerCase();
+        if (!blob.includes(f.busca)) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---------- render ----------
+  function renderKPIs(f) {
+    const base = vagasNoPeriodo(f);
+    const analisadas = base.filter((v) => v.status === "analisada");
+    const elegiveis = analisadas.filter((v) => v.elegivel);
+    const aprovadas = elegiveis.filter((v) => (v.score ?? 0) >= MIN);
+    const candidaturas = base.filter((v) => ["candidatei", "entrevista", "proposta", "recusada"].includes(etapaDe(v.id)));
+    const execs = D.execucoes.filter((e) => dentroPeriodo(e.iniciada_em, f.dias));
+    const custo = execs.reduce((a, e) => a + (e.custo_usd || 0), 0);
+    const economia = execs.reduce((a, e) => a + (e.economia_usd || 0), 0);
+    const mediaScore = elegiveis.length ? Math.round(elegiveis.reduce((a, v) => a + v.score, 0) / elegiveis.length) : null;
+    const tiles = [
+      ["Vagas coletadas", fmtN(base.length), `${fmtN(base.filter((v) => v.status === "descartada_prefiltro").length)} descartadas sem IA`],
+      ["Analisadas pelo Claude", fmtN(analisadas.length), `${fmtN(elegiveis.length)} elegíveis para estágio`],
+      [`Aprovadas (score ≥ ${MIN})`, fmtN(aprovadas.length), mediaScore === null ? "—" : `score médio das elegíveis: ${mediaScore}`],
+      ["Minhas candidaturas", fmtN(candidaturas.length), `${fmtN(base.filter((v) => etapaDe(v.id) === "entrevista").length)} em entrevista`],
+      ["Custo da IA", fmtUSD(custo), `${fmtN(execs.length)} execuções no período`],
+      ["Economia com cache", fmtUSD(economia), "prompt caching do perfil"],
+    ];
+    $("#kpis").innerHTML = tiles.map(([l, v, h]) => `<div class="card kpi"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="hint">${esc(h)}</div></div>`).join("");
+  }
+
+  function renderCharts(f) {
+    const base = vagasNoPeriodo(f);
+    const analisadas = base.filter((v) => v.status === "analisada");
+    const eleg = analisadas.filter((v) => v.elegivel);
+
+    // Funil (rampa ordinal de uma só cor, escurecendo para as etapas mais avançadas)
+    const funil = [
+      { label: "Coletadas", value: base.length },
+      { label: "Analisadas (IA)", value: analisadas.length },
+      { label: "Elegíveis", value: eleg.length },
+      { label: `Aprovadas ≥ ${MIN}`, value: eleg.filter((v) => v.score >= MIN).length },
+      { label: "Candidatei", value: base.filter((v) => ["candidatei", "entrevista", "proposta", "recusada"].includes(etapaDe(v.id))).length },
+      { label: "Entrevista", value: base.filter((v) => ["entrevista", "proposta"].includes(etapaDe(v.id))).length },
+      { label: "Proposta", value: base.filter((v) => etapaDe(v.id) === "proposta").length },
+    ];
+    const coresFunil = ["var(--seq-4)", "var(--seq-4)", "var(--seq-3)", "var(--seq-3)", "var(--seq-2)", "var(--seq-1)", "var(--seq-1)"];
+    hbars($("#c-funil"), funil, { cores: coresFunil, labelW: 130,
+      tipFn: (it) => `<b>${esc(it.label)}</b><br>${fmtN(it.value)} vaga(s)` + (funil[0].value ? `<br><span class="muted">${Math.round((it.value / funil[0].value) * 100)}% das coletadas</span>` : "") });
+
+    // Histograma de score
+    const bins = Array.from({ length: 10 }, (_, i) => ({ label: `${i * 10}`, value: 0, de: i * 10, ate: i === 9 ? 100 : i * 10 + 9 }));
+    eleg.forEach((v) => { bins[Math.min(9, Math.floor((v.score ?? 0) / 10))].value++; });
+    columns($("#c-hist"), bins, { refX: MIN / 10, refLabel: `mínimo ${MIN}`,
+      tipFn: (b) => `<b>Score ${b.de}–${b.ate}</b><br>${fmtN(b.value)} vaga(s)` });
+
+    // Ranking de tecnologias e lacunas (sobre as vagas elegíveis filtradas)
+    const contar = (lista) => {
+      const mapa = new Map();
+      lista.forEach((arr) => (arr || []).forEach((t) => { const k = t.trim(); if (k) mapa.set(k, (mapa.get(k) || 0) + 1); }));
+      return [...mapa.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([label, value]) => ({ label, value }));
+    };
+    const filtradas = vagasFiltradas(f).filter((v) => v.elegivel);
+    hbars($("#c-match"), contar(filtradas.map((v) => v.match)), { tipFn: (it) => `<b>${esc(it.label)}</b><br>aparece em ${fmtN(it.value)} vaga(s) elegível(is)` });
+    hbars($("#c-lacunas"), contar(filtradas.map((v) => v.lacunas)), { cor: "var(--series-2)", tipFn: (it) => `<b>${esc(it.label)}</b><br>lacuna em ${fmtN(it.value)} vaga(s)` });
+
+    // Execuções
+    const execs = D.execucoes.filter((e) => dentroPeriodo(e.iniciada_em, f.dias));
+    const labels = execs.map((e) => fmtDataHora(e.iniciada_em));
+    lines($("#c-exec"), $("#l-exec"), labels, [
+      { nome: "Novas", cor: "var(--series-1)", valores: execs.map((e) => e.novas) },
+      { nome: "Aprovadas", cor: "var(--series-2)", valores: execs.map((e) => e.aprovadas) },
+    ]);
+    const totalCusto = execs.reduce((a, e) => a + (e.custo_usd || 0), 0);
+    $("#s-custo").textContent = `Total no período: ${fmtUSD(totalCusto)}`;
+    columns($("#c-custo"), execs.map((e) => ({ label: fmtData(e.iniciada_em), value: e.custo_usd || 0, e })), {
+      fmt: (v) => v.toLocaleString("pt-BR", { maximumFractionDigits: 3 }), inteiro: false,
+      tipFn: (it) => `<b>${esc(fmtDataHora(it.e.iniciada_em))}</b><br>Custo: ${fmtUSD(it.e.custo_usd)}<br>Economia (cache): ${fmtUSD(it.e.economia_usd)}<br>${fmtN(it.e.analisadas)} analisada(s) · ${fmtN(it.e.cache_read)} tokens lidos do cache`,
+    });
+  }
+
+  function badgeScore(v) {
+    if (v.status === "descartada_prefiltro") return `<div class="score"><span class="tag no">pré-filtro</span></div>`;
+    if (v.status === "pendente") return `<div class="score"><span class="tag">na fila</span></div>`;
+    if (v.status === "erro") return `<div class="score"><span class="tag no">erro</span></div>`;
+    if (v.elegivel === false) return `<div class="score"><b class="muted">0</b><span class="tag no">✗ inelegível</span></div>`;
+    const s = v.score ?? 0;
+    return `<div class="score"><b>${s}</b><div class="meter" aria-hidden="true"><span style="width:${s}%"></span></div>${s >= MIN ? '<span class="tag ok">★ aprovada</span>' : ""}</div>`;
+  }
+
+  function detalhes(v) {
+    const chips = (arr, cls = "") => (arr && arr.length) ? `<div class="chips">${arr.map((t) => `<span class="chip ${cls}">${esc(t)}</span>`).join("")}</div>` : `<div class="muted">—</div>`;
+    const etapaInfo = etapas[v.id] && etapas[v.id].em ? `<div class="muted" style="margin-top:6px">Etapa atualizada em ${fmtDataHora(etapas[v.id].em)}</div>` : "";
+    return `<tr class="details"><td colspan="7"><div class="details-grid">
+      <div>
+        ${v.elegivel === false ? `<div><b>Motivo da inelegibilidade:</b> ${esc(v.motivo || "—")}</div>` : ""}
+        ${v.justificativa ? `<div><b>Análise do Claude:</b> ${esc(v.justificativa)}</div>` : ""}
+        ${v.erro ? `<div><b>Último erro:</b> ${esc(v.erro)}</div>` : ""}
+        <div style="margin-top:8px"><b>Projeto para destacar:</b> ${esc(v.projeto || "—")}</div>
+        <div style="margin-top:8px" class="muted">${esc(v.localizacao || "")} · ${esc(v.fonte_detalhe)}${v.pitch_modelo ? " · " + esc(v.pitch_modelo) : ""}</div>
+        ${etapaInfo}
+      </div>
+      <div><b>Pontos fortes</b>${chips(v.match)}<div style="margin-top:10px"><b>Gaps</b></div>${chips(v.lacunas, "gap")}</div>
+      <div><b>Pitch sugerido</b> ${v.pitch ? `<button type="button" class="copiar" data-id="${esc(v.id)}">Copiar</button>` : ""}
+        ${v.pitch ? `<div class="pitch">${esc(v.pitch)}</div>` : `<div class="muted">—</div>`}</div>
+    </div></td></tr>`;
+  }
+
+  function renderTabela(f) {
+    const lista = vagasFiltradas(f).slice().sort((a, b) => {
+      const k = ordem.campo; let va = a[k], vb = b[k];
+      if (k === "score") { va = a.elegivel === false ? -1 : (va ?? -2); vb = b.elegivel === false ? -1 : (vb ?? -2); }
+      if (va === vb) return 0; if (va == null) return 1; if (vb == null) return -1;
+      return (va < vb ? -1 : 1) * (ordem.desc ? -1 : 1);
+    });
+    $("#t-contagem").textContent = `(${fmtN(lista.length)})`;
+    const tbody = $("#tabela tbody");
+    if (!lista.length) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Nenhuma vaga com esses filtros.</td></tr>`; return; }
+    const opts = (id) => ETAPAS.map(([k, r]) => `<option value="${k}" ${etapaDe(id) === k ? "selected" : ""}>${esc(r)}</option>`).join("");
+    tbody.innerHTML = lista.slice(0, 500).map((v) => `
+      <tr class="vaga-row" data-id="${esc(v.id)}">
+        <td class="num">${badgeScore(v)}</td>
+        <td class="titulo"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.titulo)}</a><div class="sub">${esc(v.empresa || "Empresa não informada")}</div></td>
+        <td>${esc(ROT_MOD[v.modalidade] || v.modalidade)}</td>
+        <td><span class="tag">${esc(v.fonte)}</span></td>
+        <td style="white-space:nowrap">${fmtData(v.publicada_em)}</td>
+        <td style="white-space:nowrap">${v.notificado_em ? "📨 " + fmtData(v.notificado_em) : '<span class="muted">—</span>'}</td>
+        <td><select class="etapa" data-id="${esc(v.id)}" aria-label="Minha etapa">${opts(v.id)}</select></td>
+      </tr>${aberto.has(v.id) ? detalhes(v) : ""}`).join("");
+  }
+
+  function renderExecucoes() {
+    const tbody = $("#tabela-exec tbody");
+    const lista = D.execucoes.slice(-30).reverse();
+    if (!lista.length) { tbody.innerHTML = `<tr><td colspan="11" class="empty">Nenhuma execução ainda.</td></tr>`; return; }
+    tbody.innerHTML = lista.map((e) => `<tr>
+      <td style="white-space:nowrap">${fmtDataHora(e.iniciada_em)}</td><td class="num">${fmtN(e.encontradas)}</td><td class="num">${fmtN(e.novas)}</td>
+      <td class="num">${fmtN(e.descartadas)}</td><td class="num">${fmtN(e.analisadas)}</td><td class="num">${fmtN(e.aprovadas)}</td>
+      <td class="num">${fmtN(e.notificadas)}</td><td class="num">${e.erros ? `<span class="tag no">${fmtN(e.erros)}</span>` : "0"}</td>
+      <td class="num">${fmtN(e.cache_read)}</td><td class="num">${fmtUSD(e.custo_usd)}</td><td class="num">${fmtUSD(e.economia_usd)}</td></tr>`).join("");
+  }
+
+  function renderTudo() {
+    const f = filtros();
+    $("#f-score-v").textContent = f.score;
+    renderKPIs(f); renderCharts(f); renderTabela(f);
+  }
+
+  // ---------- eventos ----------
+  ["#f-busca", "#f-periodo", "#f-fonte", "#f-modalidade", "#f-etapa", "#f-score", "#f-elegiveis"].forEach((s) => $(s).addEventListener("input", renderTudo));
+  document.querySelectorAll("th.sortable").forEach((th) => th.addEventListener("click", () => {
+    const campo = th.dataset.sort;
+    ordem = { campo, desc: ordem.campo === campo ? !ordem.desc : true };
+    document.querySelectorAll("th.sortable").forEach((t) => { t.textContent = t.textContent.replace(/ [▾▴]$/, ""); });
+    th.textContent += ordem.desc ? " ▾" : " ▴";
+    renderTabela(filtros());
+  }));
+  $("#tabela tbody").addEventListener("click", (ev) => {
+    if (ev.target.closest("a, select, button")) {
+      const b = ev.target.closest("button.copiar");
+      if (b) {
+        const v = D.vagas.find((x) => x.id === b.dataset.id);
+        const ok = () => { b.textContent = "Copiado ✓"; setTimeout(() => (b.textContent = "Copiar"), 1500); };
+        const viaSelecao = () => {
+          const ta = document.createElement("textarea"); ta.value = v.pitch; document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); ok(); } catch { b.textContent = "Selecione e copie"; } ta.remove();
+        };
+        (navigator.clipboard ? navigator.clipboard.writeText(v.pitch).then(ok, viaSelecao) : viaSelecao());
+      }
+      return;
+    }
+    const row = ev.target.closest("tr.vaga-row");
+    if (!row) return;
+    const id = row.dataset.id;
+    aberto.has(id) ? aberto.delete(id) : aberto.add(id);
+    renderTabela(filtros());
+  });
+  $("#tabela tbody").addEventListener("change", (ev) => {
+    const s = ev.target.closest("select.etapa");
+    if (!s) return;
+    etapas[s.dataset.id] = { etapa: s.value, em: new Date().toISOString() };
+    salvarEtapas();
+    renderKPIs(filtros()); renderCharts(filtros());
+  });
+  $("#btn-export").addEventListener("click", (ev) => {
+    const json = JSON.stringify(etapas, null, 2);
+    // Download (funciona aberto localmente/GitHub Pages) + cópia para a área de transferência
+    // (funciona onde downloads são bloqueados, como visualizadores em sandbox).
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      a.download = "minhas-etapas.json"; a.click();
+    } catch { /* download bloqueado */ }
+    const b = ev.currentTarget;
+    if (navigator.clipboard) navigator.clipboard.writeText(json).then(() => { b.textContent = "Exportado e copiado ✓"; setTimeout(() => (b.textContent = "Exportar minhas etapas"), 2000); }, () => {});
+  });
+  $("#btn-import").addEventListener("click", () => $("#in-import").click());
+  $("#in-import").addEventListener("change", async (ev) => {
+    const file = ev.target.files[0]; if (!file) return;
+    try { etapas = { ...etapas, ...JSON.parse(await file.text()) }; salvarEtapas(); renderTudo(); }
+    catch { $("#rodape").textContent = "Arquivo de etapas inválido."; }
+  });
+
+  $("#subtitulo").textContent = `Atualizado em ${fmtDataHora(D.gerado_em)} · triagem: ${D.modelo_triagem} · pitch: ${D.modelo_pitch} · score mínimo: ${MIN}`;
+  $("#rodape").textContent = `${fmtN(D.vagas.length)} vagas no banco · ${fmtN(D.execucoes.length)} execuções ·`;
+  if (D.aviso) { const a = $("#aviso"); a.textContent = D.aviso; a.hidden = false; }
+  renderExecucoes();
+  renderTudo();
+})();
+</script>
+</body>
+</html>
