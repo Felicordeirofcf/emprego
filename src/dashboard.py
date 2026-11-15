@@ -22,6 +22,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from .claude_matcher import perfil_eh_exemplo
 from .config import Settings, get_settings
 from .database import Repositorio, criar_engine, criar_session_factory
 
@@ -91,7 +92,19 @@ def coletar_dados(session: Session, settings: Settings) -> dict[str, Any]:
         }
         for e in repo.todas_execucoes()
     ]
+    aviso = None
+    try:
+        if perfil_eh_exemplo(settings.perfil_path):
+            na_fila = sum(1 for v in vagas if v["status"] == "pendente")
+            aviso = (
+                "⚠️ O data/perfil.json ainda é o modelo com dados fictícios, então o Claude está desligado: "
+                "o robô só coleta vagas e nenhuma recebe score ou alerta. "
+                f"{na_fila} vaga(s) aguardando análise. Preencha o perfil e apague a linha \"_exemplo\": true para ativar."
+            )
+    except (OSError, ValueError):
+        pass
     return {
+        "aviso": aviso,
         "gerado_em": datetime.now(timezone.utc).isoformat(),
         "min_score": settings.min_score,
         "modelo_triagem": settings.model_triagem,
