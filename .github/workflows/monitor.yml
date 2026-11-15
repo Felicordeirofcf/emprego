@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Não enviar mensagens ao Telegram"
+        description: "Não enviar mensagens ao Telegram (só tem efeito se o Telegram estiver configurado)"
         type: boolean
         default: false
       max_vagas:
@@ -41,8 +41,10 @@ jobs:
       - name: Rodar o robô
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Alertas ficam no dashboard. Para também receber no Telegram, crie os secrets
+          # TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID e descomente as duas linhas abaixo.
+          # TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Ajustes opcionais via Settings > Secrets and variables > Actions > Variables
           MIN_SCORE: ${{ vars.MIN_SCORE || '75' }}

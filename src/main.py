@@ -192,14 +192,14 @@ def etapa_analise(repo: Repositorio, session, matcher: ClaudeMatcher, settings: 
 
 def etapa_notificacao(repo: Repositorio, session, settings: Settings, dry_run: bool, c: Contadores) -> None:
     log.info(SEP)
-    log.info("4/4 · NOTIFICAÇÃO (score ≥ %d)", settings.min_score)
+    log.info("4/4 · ALERTAS (score ≥ %d)", settings.min_score)
     aprovadas = repo.aprovadas_nao_notificadas(settings.min_score)
     if not aprovadas:
-        log.info("  nenhuma vaga nova para notificar")
+        log.info("  nenhuma vaga aprovada nova")
         return
     if dry_run or not settings.telegram_configurado:
-        motivo = "--dry-run" if dry_run else "Telegram não configurado"
-        log.info("  %d vaga(s) aprovada(s), envio pulado (%s):", len(aprovadas), motivo)
+        destino = "--dry-run, nada enviado" if dry_run else "veja o bloco 🔔 Alertas no dashboard"
+        log.info("  %d vaga(s) aprovada(s) (%s):", len(aprovadas), destino)
         for v in aprovadas:
             log.info("    ★ %3d  %s — %s", v.score, _curto(v.titulo), v.url)
         return
@@ -319,7 +319,8 @@ def _imprimir_resumo(c: Contadores, uso: UsoTokens, duracao: float, observacoes:
     log.info("  Analisadas pelo Claude ....... %d", c.analisadas)
     log.info("  Elegíveis (estágio) .......... %d", c.elegiveis)
     log.info("  Aprovadas (score mínimo) ..... %d", c.aprovadas)
-    log.info("  Notificadas no Telegram ...... %d", c.notificadas)
+    if c.notificadas:
+        log.info("  Notificadas no Telegram ...... %d", c.notificadas)
     log.info("  Erros de análise ............. %d", c.erros)
     log.info("  Chamadas à API ............... %d", uso.chamadas)
     log.info("  Tokens: entrada %d · saída %d · cache escrito %d · cache lido %d",

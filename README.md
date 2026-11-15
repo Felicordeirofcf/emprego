@@ -2,7 +2,7 @@
 
 📊 **Dashboard:** https://felicordeirofcf.github.io/emprego/ · ⚙️ **Execuções:** [aba Actions](https://github.com/Felicordeirofcf/emprego/actions)
 
-Robô que **coleta vagas de estágio** (GitHub e Gupy), **compara cada vaga com o seu currículo e portfólio** usando a API do Claude, calcula um **score de compatibilidade de 0 a 100**, **avisa no Telegram** só as melhores e mantém um **dashboard de acompanhamento** das suas candidaturas.
+Robô que **coleta vagas de estágio** (GitHub e Gupy), **compara cada vaga com o seu currículo e portfólio** usando a API do Claude, calcula um **score de compatibilidade de 0 a 100** e mostra as melhores no bloco **🔔 Alertas** de um **dashboard de acompanhamento** das suas candidaturas. O aviso pelo Telegram é opcional.
 
 - **Só estágio:** vagas Júnior/Pleno/Sênior, que exigem diploma ou que são presenciais/híbridas fora do RJ ficam com `elegivel_estagio: false` e `score: 0`.
 - **Portfólio como diferencial:** a rubrica do Claude dá peso alto (até 25 pts) a projetos reais em produção.
@@ -14,7 +14,7 @@ Robô que **coleta vagas de estágio** (GitHub e Gupy), **compara cada vaga com 
  Gupy API ──────┼─► normaliza ─► deduplica ─► pré-filtro ─► Claude Haiku 5.5 (triagem, tool use + cache)
  (+ seus        │   (Vaga)      (url_hash +    (0 tokens)        │
   scrapers)  ───┘               fingerprint)                     ├─► score ≥ 85: Claude Sonnet 5.5 (pitch)
-                                                                 ├─► score ≥ 75: Telegram 📨
+                                                                 ├─► score ≥ 75: 🔔 Alertas no dashboard (Telegram opcional)
                                                                  └─► docs/index.html (dashboard)
 ```
 
@@ -35,7 +35,7 @@ robo-vagas-estagio/
 │   ├── database.py                 # SQLAlchemy + SQLite: tabelas vagas/execucoes, duplicidade
 │   ├── prefiltro.py                # descarte determinístico (nível, região, data)
 │   ├── claude_matcher.py           # Claude: tool use estrito + prompt caching + pitch
-│   ├── notifier.py                 # Telegram MarkdownV2 com escape seguro
+│   ├── notifier.py                 # Telegram (opcional) com MarkdownV2 e escape seguro
 │   ├── dashboard.py                # gera o dashboard a partir do banco
 │   ├── dashboard_template.html     # layout do dashboard (HTML/JS sem dependências)
 │   ├── main.py                     # orquestrador
@@ -44,7 +44,7 @@ robo-vagas-estagio/
 │       ├── base.py                 # JobScraper (classe base) + HttpClient com retry/rate limit
 │       ├── github_vagas.py         # backend-br, frontendbr, react-brasil
 │       └── gupy.py                 # API pública do portal da Gupy
-├── tests/                          # 35 testes (pytest), sem rede e sem gastar tokens
+├── tests/                          # 36 testes (pytest), sem rede e sem gastar tokens
 ├── .env.example
 ├── Dockerfile
 ├── requirements.txt / requirements-dev.txt
@@ -90,7 +90,9 @@ Depois preencha o `.env` (passos abaixo) e o **`data/perfil.json`** com os seus 
 
 > Nunca commite o `.env`. Ele já está no `.gitignore`.
 
-### 2. Criar o bot do Telegram
+### 2. (Opcional) Criar o bot do Telegram
+
+Pule esta etapa se quiser os alertas só no dashboard, que é o padrão do workflow.
 
 1. No Telegram, abra uma conversa com **@BotFather** e envie `/newbot`.
 2. Escolha um nome e um usuário terminado em `bot` (ex.: `minhas_vagas_estagio_bot`).
@@ -178,6 +180,7 @@ docker run --rm --env-file .env -v "$PWD/data:/app/data" -v "$PWD/docs:/app/docs
 
 A cada execução o robô gera `docs/index.html`, um arquivo único, sem dependências externas, com tema claro e escuro:
 
+- **🔔 Alertas (topo da página):** vagas elegíveis com score ≥ `MIN_SCORE` que você ainda não avaliou. As que chegaram desde a sua última visita levam o selo **NOVA**, e a aba do navegador mostra a contagem, por exemplo "(3) Robô de Vagas". Cada alerta tem os botões *Ver pitch*, *Tenho interesse*, *Candidatei* e *Descartar*; ao escolher uma ação, a vaga sai dos alertas e segue na tabela. *Marcar todas como vistas* zera o selo NOVA.
 - **Indicadores:** vagas coletadas, analisadas, aprovadas, suas candidaturas, custo da IA e economia com cache.
 - **Funil:** Coletadas → Analisadas → Elegíveis → Aprovadas → Candidatei → Entrevista → Proposta.
 - **Distribuição de score** com a linha do score mínimo.
@@ -207,8 +210,7 @@ Depois acesse <http://localhost:8000/index.html>. Também dá para abrir o arqui
 1. Suba o projeto para um repositório seu no GitHub (de preferência privado).
 2. Em **Settings → Secrets and variables → Actions → New repository secret**, crie:
    - `ANTHROPIC_API_KEY`
-   - `TELEGRAM_BOT_TOKEN`
-   - `TELEGRAM_CHAT_ID`
+   - (opcional, para receber também no Telegram) `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID`, descomentando as duas linhas correspondentes em `.github/workflows/monitor.yml`
 3. (Opcional) Na aba **Variables**, ajuste `MIN_SCORE`, `CLAUDE_MODEL_TRIAGEM`, `CLAUDE_MODEL_PITCH`, `ENABLE_SONNET_PITCH` e `MAX_VAGAS_POR_EXECUCAO`.
 4. Em **Settings → Actions → General → Workflow permissions**, marque **Read and write permissions**.
 5. Na aba **Actions**, abra *Monitor de vagas de estágio* e clique em **Run workflow** para testar (há a opção `dry_run`).
@@ -243,7 +245,7 @@ No Windows, use o **Agendador de Tarefas** apontando para `.venv\Scripts\python.
 | `CLAUDE_EFFORT_TRIAGEM` / `CLAUDE_EFFORT_PITCH` | `medium` | Esforço de raciocínio: `low`, `medium`, `high`, `xhigh`, `max` |
 | `ENABLE_SONNET_PITCH` | `true` | Liga/desliga o pitch com o modelo maior |
 | `SONNET_PITCH_MIN_SCORE` | `85` | Score a partir do qual o pitch é gerado |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | — | Bot e chat de destino |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | — | Opcional: bot e chat de destino (sem eles, alertas só no dashboard) |
 | `TELEGRAM_ENVIAR_RESUMO` | `true` | Resumo da execução (só quando há vagas novas) |
 | `MIN_SCORE` | `75` | Score mínimo para notificar |
 | `MAX_VAGAS_POR_EXECUCAO` | `60` | Teto de vagas analisadas por rodada (controle de custo) |
@@ -293,7 +295,7 @@ O pitch usa o **Claude Sonnet 5.5** com raciocínio adaptativo e **fallback auto
 | Pitch Sonnet 5.5 (só score ≥ 85) | ~US$ 0,02–0,04 |
 | Rodada típica (5–15 vagas novas, 1–2 pitches) | ~US$ 0,01–0,08 |
 
-O teto por rodada é controlado por `MAX_VAGAS_POR_EXECUCAO`. O custo real de cada execução aparece no log, no resumo do Telegram e no dashboard.
+O teto por rodada é controlado por `MAX_VAGAS_POR_EXECUCAO`. O custo real de cada execução aparece no log e no dashboard.
 
 > Quase todo o custo vem do pitch com o Sonnet. Para gastar menos, suba `SONNET_PITCH_MIN_SCORE` ou use `CLAUDE_EFFORT_PITCH=low`. Os modelos são configuráveis (`CLAUDE_MODEL_TRIAGEM` / `CLAUDE_MODEL_PITCH`) e os preços ficam em `src/config.py`. Para modelos que não aceitam `tool_choice` forçado, o código usa `auto` automaticamente, mantendo o schema estrito.
 
@@ -338,7 +340,7 @@ Deduplicação, pré-filtro, análise, notificação e dashboard funcionam sem n
 pytest
 ```
 
-São 35 testes: scrapers com HTTP simulado, deduplicação, pré-filtro, request do Claude (cache, tool forçada, schema), regra de `score=0`, escape do MarkdownV2, fallback e rate limit do Telegram, e um teste ponta a ponta do orquestrador com geração do dashboard. Nenhum teste acessa a rede ou gasta tokens.
+São 36 testes: scrapers com HTTP simulado, deduplicação, pré-filtro, request do Claude (cache, tool forçada, schema), regra de `score=0`, escape do MarkdownV2, fallback e rate limit do Telegram, e um teste ponta a ponta do orquestrador com geração do dashboard. Nenhum teste acessa a rede ou gasta tokens.
 
 ---
 

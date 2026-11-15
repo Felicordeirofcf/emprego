@@ -107,6 +107,14 @@
   .section-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 8px 0 10px; flex-wrap: wrap; }
   .table-wrap { overflow-x: auto; }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .alertas { margin-bottom: 16px; border-color: var(--series-1); }
+  .alertas-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .alerta { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--grid); }
+  .alerta:first-of-type { border-top: 0; }
+  .alerta .acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .alerta .acoes button { font-size: 12.5px; padding: 4px 8px; }
+  .tag.nova { color: var(--series-1); border-color: currentColor; font-weight: 600; }
+  @media (max-width: 640px) { .alerta { grid-template-columns: 48px 1fr; } .alerta .acoes { grid-column: 1 / -1; justify-content: flex-start; } }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   @media (forced-colors: active) { .meter span { background: CanvasText; } }
 </style>
@@ -124,6 +132,7 @@
   </header>
 
   <div id="aviso" class="card" role="note" hidden style="margin-bottom:16px;border-color:var(--series-2)"></div>
+  <section class="card alertas" id="alertas" aria-label="Alertas de vagas aprovadas"></section>
   <section class="kpis" id="kpis" aria-label="Indicadores"></section>
 
   <section class="filters card" aria-label="Filtros">
@@ -171,7 +180,7 @@
           <th>Modalidade</th>
           <th>Fonte</th>
           <th class="sortable" data-sort="publicada_em">Publicada</th>
-          <th>Telegram</th>
+          <th class="sortable" data-sort="coletada_em">Coletada</th>
           <th>Minha etapa</th>
         </tr></thead>
         <tbody></tbody>
@@ -185,7 +194,7 @@
       <table id="tabela-exec">
         <thead><tr>
           <th>Início</th><th class="num">Encontradas</th><th class="num">Novas</th><th class="num">Pré-filtro</th>
-          <th class="num">Analisadas</th><th class="num">Aprovadas</th><th class="num">Notificadas</th>
+          <th class="num">Analisadas</th><th class="num">Aprovadas</th>
           <th class="num">Erros</th><th class="num">Cache lido</th><th class="num">Custo</th><th class="num">Economia</th>
         </tr></thead>
         <tbody></tbody>
@@ -201,7 +210,7 @@
   <div id="tooltip" role="status" aria-live="polite"></div>
 </div>
 
-<script id="dados" type="application/json">{"gerado_em": "2026-11-15T13:36:08.464404+00:00", "min_score": 75, "modelo_triagem": "claude-haiku-5-5", "modelo_pitch": "claude-sonnet-5-5", "vagas": [], "execucoes": []}</script>
+<script id="dados" type="application/json">{"gerado_em": "2026-11-15T13:44:30.362911+00:00", "min_score": 75, "modelo_triagem": "claude-haiku-5-5", "modelo_pitch": "claude-sonnet-5-5", "vagas": [], "execucoes": []}</script>
 <script>
 (() => {
   "use strict";
@@ -234,6 +243,13 @@
   try { etapas = JSON.parse(store.getItem(LS_KEY) || "{}"); } catch { etapas = {}; }
   const salvarEtapas = () => store.setItem(LS_KEY, JSON.stringify(etapas));
   const etapaDe = (id) => (etapas[id] && etapas[id].etapa) || "nova";
+
+  // "Visto por último": vagas coletadas depois disso ganham o selo NOVA.
+  const LS_VISTO = "robo-vagas:visto-em";
+  let vistoEm = store.getItem(LS_VISTO);  // null na 1ª visita: tudo que é alerta conta como novo
+  const ehNova = (v) => v.status === "analisada" && v.elegivel && (v.score ?? 0) >= MIN &&
+    (!vistoEm || (v.coletada_em && v.coletada_em > vistoEm));
+  const ehAlerta = (v) => v.status === "analisada" && v.elegivel === true && (v.score ?? 0) >= MIN && etapaDe(v.id) === "nova";
 
   // ---------- tema ----------
   const rootEl = document.documentElement;
@@ -534,7 +550,7 @@
         <td>${esc(ROT_MOD[v.modalidade] || v.modalidade)}</td>
         <td><span class="tag">${esc(v.fonte)}</span></td>
         <td style="white-space:nowrap">${fmtData(v.publicada_em)}</td>
-        <td style="white-space:nowrap">${v.notificado_em ? "📨 " + fmtData(v.notificado_em) : '<span class="muted">—</span>'}</td>
+        <td style="white-space:nowrap">${fmtData(v.coletada_em)}${ehNova(v) ? ' <span class="tag nova">NOVA</span>' : ""}</td>
         <td><select class="etapa" data-id="${esc(v.id)}" aria-label="Minha etapa">${opts(v.id)}</select></td>
       </tr>${aberto.has(v.id) ? detalhes(v) : ""}`).join("");
   }
@@ -542,18 +558,51 @@
   function renderExecucoes() {
     const tbody = $("#tabela-exec tbody");
     const lista = D.execucoes.slice(-30).reverse();
-    if (!lista.length) { tbody.innerHTML = `<tr><td colspan="11" class="empty">Nenhuma execução ainda.</td></tr>`; return; }
+    if (!lista.length) { tbody.innerHTML = `<tr><td colspan="10" class="empty">Nenhuma execução ainda.</td></tr>`; return; }
     tbody.innerHTML = lista.map((e) => `<tr>
       <td style="white-space:nowrap">${fmtDataHora(e.iniciada_em)}</td><td class="num">${fmtN(e.encontradas)}</td><td class="num">${fmtN(e.novas)}</td>
       <td class="num">${fmtN(e.descartadas)}</td><td class="num">${fmtN(e.analisadas)}</td><td class="num">${fmtN(e.aprovadas)}</td>
-      <td class="num">${fmtN(e.notificadas)}</td><td class="num">${e.erros ? `<span class="tag no">${fmtN(e.erros)}</span>` : "0"}</td>
+      <td class="num">${e.erros ? `<span class="tag no">${fmtN(e.erros)}</span>` : "0"}</td>
       <td class="num">${fmtN(e.cache_read)}</td><td class="num">${fmtUSD(e.custo_usd)}</td><td class="num">${fmtUSD(e.economia_usd)}</td></tr>`).join("");
+  }
+
+  function renderAlertas() {
+    const lista = D.vagas.filter(ehAlerta).sort((a, b) =>
+      (ehNova(b) - ehNova(a)) || (b.score - a.score) || String(b.coletada_em).localeCompare(String(a.coletada_em)));
+    const novas = lista.filter(ehNova).length;
+    document.title = (lista.length ? `(${lista.length}) ` : "") + "Robô de Vagas de Estágio · Dashboard";
+    const box = $("#alertas");
+    if (!lista.length) {
+      box.innerHTML = `<div class="alertas-head"><h2>🔔 Alertas</h2></div>
+        <div class="muted">Nenhuma vaga aprovada esperando sua avaliação. Novas vagas com score ≥ ${MIN} aparecem aqui a cada execução do robô.</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="alertas-head">
+        <div><h2>🔔 Alertas · ${fmtN(lista.length)} vaga(s) com score ≥ ${MIN} para avaliar</h2>
+        <div class="sub">${novas ? `<b>${fmtN(novas)} nova(s)</b> desde a sua última visita. ` : ""}Escolha uma ação para tirar a vaga daqui; ela continua na tabela abaixo.</div></div>
+        ${novas ? '<button type="button" id="btn-visto">Marcar todas como vistas</button>' : ""}
+      </div>` + lista.slice(0, 30).map((v) => `
+      <div class="alerta" data-id="${esc(v.id)}">
+        <div class="score"><b>${v.score}</b><div class="meter" aria-hidden="true"><span style="width:${v.score}%"></span></div></div>
+        <div>
+          <div class="titulo"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.titulo)}</a>
+            ${ehNova(v) ? '<span class="tag nova">NOVA</span>' : ""}</div>
+          <div class="sub">${esc(v.empresa || "Empresa não informada")} · ${esc(ROT_MOD[v.modalidade] || v.modalidade)} · coletada em ${fmtData(v.coletada_em)}</div>
+          ${v.match && v.match.length ? `<div class="sub">✅ ${esc(v.match.slice(0, 6).join(", "))}${v.lacunas && v.lacunas.length ? ` · ⚠️ ${esc(v.lacunas.slice(0, 3).join(", "))}` : ""}</div>` : ""}
+        </div>
+        <div class="acoes">
+          <button type="button" data-acao="ver">Ver pitch</button>
+          <button type="button" data-acao="interesse">Tenho interesse</button>
+          <button type="button" data-acao="candidatei">Candidatei</button>
+          <button type="button" data-acao="descartada">Descartar</button>
+        </div>
+      </div>`).join("") + (lista.length > 30 ? `<div class="muted" style="padding-top:8px">+ ${lista.length - 30} na tabela abaixo.</div>` : "");
   }
 
   function renderTudo() {
     const f = filtros();
     $("#f-score-v").textContent = f.score;
-    renderKPIs(f); renderCharts(f); renderTabela(f);
+    renderAlertas(); renderKPIs(f); renderCharts(f); renderTabela(f);
   }
 
   // ---------- eventos ----------
@@ -590,7 +639,25 @@
     if (!s) return;
     etapas[s.dataset.id] = { etapa: s.value, em: new Date().toISOString() };
     salvarEtapas();
-    renderKPIs(filtros()); renderCharts(filtros());
+    renderAlertas(); renderKPIs(filtros()); renderCharts(filtros());
+  });
+  $("#alertas").addEventListener("click", (ev) => {
+    if (ev.target.id === "btn-visto") {
+      vistoEm = new Date().toISOString(); store.setItem(LS_VISTO, vistoEm); renderTudo(); return;
+    }
+    const b = ev.target.closest("button[data-acao]");
+    if (!b) return;
+    const id = b.closest(".alerta").dataset.id;
+    if (b.dataset.acao === "ver") {
+      // Abre os detalhes na tabela (limpando filtros que esconderiam a vaga) e rola até ela.
+      $("#f-busca").value = ""; $("#f-etapa").value = ""; $("#f-fonte").value = ""; $("#f-modalidade").value = ""; $("#f-score").value = 0; $("#f-periodo").value = "0";
+      aberto.add(id); renderTudo();
+      const row = document.querySelector(`tr.vaga-row[data-id="${CSS.escape(id)}"]`);
+      if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    etapas[id] = { etapa: b.dataset.acao, em: new Date().toISOString() };
+    salvarEtapas(); renderTudo();
   });
   $("#btn-export").addEventListener("click", (ev) => {
     const json = JSON.stringify(etapas, null, 2);
@@ -611,7 +678,7 @@
     catch { $("#rodape").textContent = "Arquivo de etapas inválido."; }
   });
 
-  $("#subtitulo").textContent = `Atualizado em ${fmtDataHora(D.gerado_em)} · triagem: ${D.modelo_triagem} · pitch: ${D.modelo_pitch} · score mínimo: ${MIN}`;
+  $("#subtitulo").textContent = `Atualizado em ${fmtDataHora(D.gerado_em)} · o robô roda a cada 6h · triagem: ${D.modelo_triagem} · pitch: ${D.modelo_pitch} · score mínimo: ${MIN}`;
   $("#rodape").textContent = `${fmtN(D.vagas.length)} vagas no banco · ${fmtN(D.execucoes.length)} execuções ·`;
   if (D.aviso) { const a = $("#aviso"); a.textContent = D.aviso; a.hidden = false; }
   renderExecucoes();
