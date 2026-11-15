@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Robô de Vagas de Estágio · Dashboard</title>
+<title>Robô de Vagas · Estágio e Júnior</title>
 <style>
   .viz-root {
     color-scheme: light;
@@ -123,7 +123,7 @@
 <div class="viz-root">
   <header>
     <div>
-      <h1>🤖 Robô de Vagas de Estágio</h1>
+      <h1>🤖 Robô de Vagas · Estágio e Júnior</h1>
       <div class="sub" id="subtitulo"></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -151,6 +151,11 @@
         <option value="">Todas</option><option value="remoto">Remoto</option>
         <option value="hibrido">Híbrido</option><option value="presencial">Presencial</option>
         <option value="nao_informado">Não informado</option>
+      </select>
+    </label>
+    <label>Nível
+      <select id="f-nivel">
+        <option value="">Todos</option><option value="estagio">Estágio</option><option value="junior">Júnior</option>
       </select>
     </label>
     <label>Minha etapa <select id="f-etapa"><option value="">Todas</option></select></label>
@@ -222,6 +227,8 @@
     ["entrevista", "Entrevista"], ["proposta", "Proposta"], ["recusada", "Não avançou"], ["descartada", "Descartei"],
   ];
   const ROT_ETAPA = Object.fromEntries(ETAPAS);
+  const ROT_NIVEL = { estagio: "Estágio", junior: "Júnior", outro: "Outro nível" };
+  const tagNivel = (v) => v.nivel && ROT_NIVEL[v.nivel] ? `<span class="tag">${ROT_NIVEL[v.nivel]}</span>` : "";
   const ROT_MOD = { remoto: "Remoto", hibrido: "Híbrido", presencial: "Presencial", nao_informado: "Não informado" };
 
   // ---------- util ----------
@@ -411,6 +418,7 @@
       fonte: $("#f-fonte").value,
       modalidade: $("#f-modalidade").value,
       etapa: $("#f-etapa").value,
+      nivel: $("#f-nivel").value,
       score: Number($("#f-score").value),
       elegiveis: $("#f-elegiveis").checked,
     };
@@ -425,6 +433,7 @@
       if (f.elegiveis && v.elegivel !== true) return false;
       if (f.score && (v.score ?? -1) < f.score) return false;
       if (f.etapa && etapaDe(v.id) !== f.etapa) return false;
+      if (f.nivel && v.nivel !== f.nivel) return false;
       if (f.busca) {
         const blob = [v.titulo, v.empresa, v.localizacao, ...(v.match || []), ...(v.lacunas || [])].join(" ").toLowerCase();
         if (!blob.includes(f.busca)) return false;
@@ -446,7 +455,7 @@
     const mediaScore = elegiveis.length ? Math.round(elegiveis.reduce((a, v) => a + v.score, 0) / elegiveis.length) : null;
     const tiles = [
       ["Vagas coletadas", fmtN(base.length), `${fmtN(base.filter((v) => v.status === "descartada_prefiltro").length)} descartadas sem IA`],
-      ["Analisadas pelo Claude", fmtN(analisadas.length), `${fmtN(elegiveis.length)} elegíveis para estágio`],
+      ["Analisadas pelo Claude", fmtN(analisadas.length), `${fmtN(elegiveis.length)} elegíveis (estágio/júnior)`],
       [`Aprovadas (score ≥ ${MIN})`, fmtN(aprovadas.length), mediaScore === null ? "—" : `score médio das elegíveis: ${mediaScore}`],
       ["Minhas candidaturas", fmtN(candidaturas.length), `${fmtN(base.filter((v) => etapaDe(v.id) === "entrevista").length)} em entrevista`],
       ["Custo da IA", fmtUSD(custo), `${fmtN(execs.length)} execuções no período`],
@@ -546,7 +555,7 @@
     tbody.innerHTML = lista.slice(0, 500).map((v) => `
       <tr class="vaga-row" data-id="${esc(v.id)}">
         <td class="num">${badgeScore(v)}</td>
-        <td class="titulo"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.titulo)}</a><div class="sub">${esc(v.empresa || "Empresa não informada")}</div></td>
+        <td class="titulo"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.titulo)}</a> ${tagNivel(v)}<div class="sub">${esc(v.empresa || "Empresa não informada")}</div></td>
         <td>${esc(ROT_MOD[v.modalidade] || v.modalidade)}</td>
         <td><span class="tag">${esc(v.fonte)}</span></td>
         <td style="white-space:nowrap">${fmtData(v.publicada_em)}</td>
@@ -570,7 +579,7 @@
     const lista = D.vagas.filter(ehAlerta).sort((a, b) =>
       (ehNova(b) - ehNova(a)) || (b.score - a.score) || String(b.coletada_em).localeCompare(String(a.coletada_em)));
     const novas = lista.filter(ehNova).length;
-    document.title = (lista.length ? `(${lista.length}) ` : "") + "Robô de Vagas de Estágio · Dashboard";
+    document.title = (lista.length ? `(${lista.length}) ` : "") + "Robô de Vagas · Estágio e Júnior";
     const box = $("#alertas");
     if (!lista.length) {
       box.innerHTML = `<div class="alertas-head"><h2>🔔 Alertas</h2></div>
@@ -586,7 +595,7 @@
         <div class="score"><b>${v.score}</b><div class="meter" aria-hidden="true"><span style="width:${v.score}%"></span></div></div>
         <div>
           <div class="titulo"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${esc(v.titulo)}</a>
-            ${ehNova(v) ? '<span class="tag nova">NOVA</span>' : ""}</div>
+            ${tagNivel(v)} ${ehNova(v) ? '<span class="tag nova">NOVA</span>' : ""}</div>
           <div class="sub">${esc(v.empresa || "Empresa não informada")} · ${esc(ROT_MOD[v.modalidade] || v.modalidade)} · coletada em ${fmtData(v.coletada_em)}</div>
           ${v.match && v.match.length ? `<div class="sub">✅ ${esc(v.match.slice(0, 6).join(", "))}${v.lacunas && v.lacunas.length ? ` · ⚠️ ${esc(v.lacunas.slice(0, 3).join(", "))}` : ""}</div>` : ""}
         </div>
@@ -606,7 +615,7 @@
   }
 
   // ---------- eventos ----------
-  ["#f-busca", "#f-periodo", "#f-fonte", "#f-modalidade", "#f-etapa", "#f-score", "#f-elegiveis"].forEach((s) => $(s).addEventListener("input", renderTudo));
+  ["#f-busca", "#f-periodo", "#f-fonte", "#f-modalidade", "#f-nivel", "#f-etapa", "#f-score", "#f-elegiveis"].forEach((s) => $(s).addEventListener("input", renderTudo));
   document.querySelectorAll("th.sortable").forEach((th) => th.addEventListener("click", () => {
     const campo = th.dataset.sort;
     ordem = { campo, desc: ordem.campo === campo ? !ordem.desc : true };
@@ -650,7 +659,7 @@
     const id = b.closest(".alerta").dataset.id;
     if (b.dataset.acao === "ver") {
       // Abre os detalhes na tabela (limpando filtros que esconderiam a vaga) e rola até ela.
-      $("#f-busca").value = ""; $("#f-etapa").value = ""; $("#f-fonte").value = ""; $("#f-modalidade").value = ""; $("#f-score").value = 0; $("#f-periodo").value = "0";
+      $("#f-busca").value = ""; $("#f-etapa").value = ""; $("#f-nivel").value = ""; $("#f-fonte").value = ""; $("#f-modalidade").value = ""; $("#f-score").value = 0; $("#f-periodo").value = "0";
       aberto.add(id); renderTudo();
       const row = document.querySelector(`tr.vaga-row[data-id="${CSS.escape(id)}"]`);
       if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });

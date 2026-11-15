@@ -39,6 +39,20 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat()
 
 
+def _nivel_pelo_titulo(titulo: str) -> str | None:
+    """Nível provável para vagas ainda não analisadas pelo Claude."""
+    import re
+
+    from .models import normalizar_texto
+
+    t = normalizar_texto(titulo)
+    if re.search(r"\b(estagi\w*|intern)", t):
+        return "estagio"
+    if re.search(r"\b(junior|jr)\b", t):
+        return "junior"
+    return None
+
+
 def coletar_dados(session: Session, settings: Settings) -> dict[str, Any]:
     repo = Repositorio(session)
     vagas = []
@@ -53,6 +67,7 @@ def coletar_dados(session: Session, settings: Settings) -> dict[str, Any]:
                 "url": v.url,
                 "localizacao": v.localizacao,
                 "modalidade": v.modalidade_detectada or v.modalidade or "nao_informado",
+                "nivel": v.nivel_vaga or _nivel_pelo_titulo(v.titulo),
                 "publicada_em": _iso(v.publicada_em),
                 "coletada_em": _iso(v.coletada_em),
                 "status": v.status,

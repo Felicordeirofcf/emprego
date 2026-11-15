@@ -53,6 +53,13 @@ class GupyScraper(JobScraper):
         return "estagi" in normalizar_texto(item.get("name", ""))
 
     @staticmethod
+    def eh_junior(item: dict) -> bool:
+        tipo = (item.get("type") or "").lower()
+        if "apprentice" in tipo:
+            return False
+        return bool(re.search(r"\b(junior|jr)\b", normalizar_texto(item.get("name", ""))))
+
+    @staticmethod
     def normalizar(item: dict) -> Vaga:
         workplace = (item.get("workplaceType") or "").lower()
         modalidade = MAPA_MODALIDADE.get(workplace)
@@ -80,8 +87,10 @@ class GupyScraper(JobScraper):
             id_externo=str(item.get("id")) if item.get("id") is not None else None,
         )
 
-    def buscar_termo(self, termo: str) -> Iterable[Vaga]:
-        filtrar_tipo = True  # pede só estágio ao servidor; se ele recusar o filtro, filtra localmente
+    def buscar_termo(self, termo: str, so_estagio: bool = True) -> Iterable[Vaga]:
+        # so_estagio=True: pede só estágio ao servidor (type) e confere localmente.
+        # so_estagio=False: busca de júnior, sem filtro de tipo; aceita títulos com Júnior/Jr.
+        filtrar_tipo = so_estagio
         for pagina in range(MAX_PAGINAS):
             offset = pagina * LIMITE
             params = {"jobName": termo, "limit": LIMITE, "offset": offset}
@@ -103,7 +112,10 @@ class GupyScraper(JobScraper):
 
             itens = payload.get("data") or []
             for item in itens:
-                if not isinstance(item, dict) or not self.eh_estagio(item):
+                if not isinstance(item, dict):
+                    continue
+                aceito = self.eh_estagio(item) if so_estagio else (self.eh_junior(item) or self.eh_estagio(item))
+                if not aceito:
                     continue
                 vaga = self.normalizar(item)
                 if vaga.url and vaga.titulo:
@@ -114,13 +126,16 @@ class GupyScraper(JobScraper):
                 break
 
     def coletar(self) -> Iterable[Vaga]:
-        for termo in self.settings.gupy_termos:
+        buscas = [(t, True) for t in self.settings.gupy_termos]
+        if self.settings.incluir_junior:
+            buscas += [(t, False) for t in self.settings.gupy_termos_junior]
+        for termo, so_estagio in buscas:
             try:
                 n = 0
-                for vaga in self.buscar_termo(termo):
+                for vaga in self.buscar_termo(termo, so_estagio=so_estagio):
                     n += 1
                     yield vaga
-                log.info("[gupy] '%s': %d vaga(s) de estágio", termo, n)
+                log.info("[gupy] '%s': %d vaga(s) de %s", termo, n, "estágio" if so_estagio else "júnior")
             except ScraperError as exc:
                 self.registrar_erro(str(exc))
             except Exception as exc:  # noqa: BLE001

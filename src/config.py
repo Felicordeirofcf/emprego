@@ -92,6 +92,19 @@ class Settings:
         )
     )
 
+    # Buscas extras para vagas JÚNIOR (sem o filtro de estágio no servidor; o nível é conferido
+    # localmente pelo título).
+    gupy_termos_junior: list[str] = field(
+        default_factory=lambda: _list(
+            "GUPY_TERMOS_JUNIOR",
+            "desenvolvedor júnior;desenvolvedora júnior;desenvolvedor junior;programador júnior;"
+            "dev júnior;full stack júnior;front-end júnior;back-end júnior;python júnior;"
+            "react júnior;node júnior;analista de sistemas júnior",
+            sep=";",
+        )
+    )
+    incluir_junior: bool = field(default_factory=lambda: _bool("INCLUIR_JUNIOR", True))
+
     database_path: Path = field(default_factory=lambda: _path("DATABASE_PATH", "data/vagas.db"))
     perfil_path: Path = field(default_factory=lambda: _path("PERFIL_PATH", "data/perfil.json"))
     dashboard_path: Path = field(default_factory=lambda: _path("DASHBOARD_PATH", "docs/index.html"))

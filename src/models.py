@@ -63,7 +63,8 @@ class Vaga:
 class MatchResult(BaseModel):
     """Saída estruturada da análise do Claude (espelha o input_schema da tool)."""
 
-    elegivel_estagio: bool
+    elegivel_estagio: bool  # "elegível para o candidato": estágio OU júnior
+    nivel_vaga: str = "outro"  # estagio | junior | outro
     motivo_inelegibilidade: str | None = None
     score: int = Field(ge=0, le=100)
     justificativa: str
@@ -88,7 +89,7 @@ class MatchResult(BaseModel):
         if not self.elegivel_estagio:
             self.score = 0
             if not self.motivo_inelegibilidade:
-                self.motivo_inelegibilidade = "Vaga não é de estágio ou está fora da região aceita."
+                self.motivo_inelegibilidade = "Vaga fora do nível (estágio/júnior) ou da região aceita."
         else:
             self.motivo_inelegibilidade = None
         return self

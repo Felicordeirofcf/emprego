@@ -43,3 +43,15 @@ def test_erro_e_retentado_ate_o_limite(repo):
     assert row.status == STATUS_ERRO and repo.pendentes_de_analise(10) == [row]
     repo.registrar_erro(row, "timeout")
     assert repo.pendentes_de_analise(10) == []
+
+
+def test_migracao_adiciona_coluna_nova(tmp_path):
+    import sqlite3
+    from src.database import criar_engine
+    caminho = tmp_path / "antigo.db"
+    con = sqlite3.connect(caminho)
+    con.execute("CREATE TABLE vagas (id INTEGER PRIMARY KEY, url_hash VARCHAR(64))")
+    con.commit(); con.close()
+    criar_engine(caminho)
+    colunas = {r[1] for r in sqlite3.connect(caminho).execute("PRAGMA table_info(vagas)")}
+    assert "nivel_vaga" in colunas and "pitch_candidatura" in colunas

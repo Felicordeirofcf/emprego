@@ -7,7 +7,7 @@ from src.claude_matcher import NOME_TOOL, TOOL_ANALISE, AnaliseError, ClaudeMatc
 from .conftest import nova_vaga
 
 ANALISE_OK = {
-    "elegivel_estagio": True, "motivo_inelegibilidade": None, "modalidade_detectada": "remoto",
+    "elegivel_estagio": True, "nivel_vaga": "junior", "motivo_inelegibilidade": None, "modalidade_detectada": "remoto",
     "tecnologias_match": ["React", "Node.js", "PostgreSQL"], "lacunas": [],
     "justificativa": "Atende aos requisitos.", "score": 93,
     "projeto_portfolio_destacar": "AgendaPro — SaaS em produção", "pitch_candidatura": "Olá! Sou estudante de ADS...",
@@ -51,7 +51,7 @@ def test_request_usa_cache_e_tool_forcada(settings, perfil):
     m = _matcher(settings, perfil, [_msg([{"type": "tool_use", "id": "t1", "name": NOME_TOOL, "input": ANALISE_OK}],
                                          cache_read=5000)])
     res = m.analisar(nova_vaga())
-    assert res.resultado.score == 93
+    assert res.resultado.score == 93 and res.resultado.nivel_vaga == "junior"
     req = m.client.messages.chamadas[0]
     assert req["model"] == "claude-haiku-5-5"
     assert req["tool_choice"] == {"type": "tool", "name": NOME_TOOL}

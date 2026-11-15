@@ -1,10 +1,10 @@
-# 🤖 Robô de Vagas de Estágio em Tecnologia (Claude API)
+# 🤖 Robô de Vagas de Estágio e Júnior em Tecnologia (Claude API)
 
 📊 **Dashboard:** https://felicordeirofcf.github.io/emprego/ · ⚙️ **Execuções:** [aba Actions](https://github.com/Felicordeirofcf/emprego/actions)
 
-Robô que **coleta vagas de estágio** (GitHub e Gupy), **compara cada vaga com o seu currículo e portfólio** usando a API do Claude, calcula um **score de compatibilidade de 0 a 100** e mostra as melhores no bloco **🔔 Alertas** de um **dashboard de acompanhamento** das suas candidaturas. O aviso pelo Telegram é opcional.
+Robô que **coleta vagas de estágio e júnior** (GitHub e Gupy), **compara cada vaga com o seu currículo e portfólio** usando a API do Claude, calcula um **score de compatibilidade de 0 a 100** e mostra as melhores no bloco **🔔 Alertas** de um **dashboard de acompanhamento** das suas candidaturas. O aviso pelo Telegram é opcional.
 
-- **Só estágio:** vagas Júnior/Pleno/Sênior, que exigem diploma ou que são presenciais/híbridas fora do RJ ficam com `elegivel_estagio: false` e `score: 0`.
+- **Só estágio e júnior:** vagas Pleno/Sênior, que exigem diploma em TI ou que são presenciais/híbridas fora do RJ ficam com `elegivel_estagio: false` e `score: 0`. Vagas júnior que pedem anos de experiência não são eliminadas: viram lacuna e têm o score limitado. Para voltar a buscar só estágio, use `INCLUIR_JUNIOR=false`.
 - **Portfólio como diferencial:** a rubrica do Claude dá peso alto (até 25 pts) a projetos reais em produção.
 - **Custo baixo:** triagem com o **Claude Haiku 5.5** (US$ 0,10 por milhão de tokens de entrada). Um pré-filtro local descarta o óbvio sem gastar tokens. O perfil vai em **prompt caching**, então da 2ª vaga em diante ele é cobrado a 10% do preço.
 - **Resposta 100% tipada:** **Tool Use** com JSON Schema estrito (`strict: true`) e `tool_choice` forçado, validado de novo com Pydantic.
@@ -44,7 +44,7 @@ robo-vagas-estagio/
 │       ├── base.py                 # JobScraper (classe base) + HttpClient com retry/rate limit
 │       ├── github_vagas.py         # backend-br, frontendbr, react-brasil
 │       └── gupy.py                 # API pública do portal da Gupy
-├── tests/                          # 36 testes (pytest), sem rede e sem gastar tokens
+├── tests/                          # 42 testes (pytest), sem rede e sem gastar tokens
 ├── .env.example
 ├── Dockerfile
 ├── requirements.txt / requirements-dev.txt
@@ -255,7 +255,9 @@ No Windows, use o **Agendador de Tarefas** apontando para `.venv\Scripts\python.
 | `UF_PRESENCIAL` / `ESTADO_PRESENCIAL` | `RJ` / `Rio de Janeiro` | Região aceita para presencial/híbrido |
 | `FONTES_ATIVAS` | `github,gupy` | Fontes habilitadas |
 | `GITHUB_REPOS` | 3 repositórios | Repositórios de vagas no GitHub |
-| `GUPY_TERMOS` | 14 termos de tecnologia | Buscas na Gupy, separadas por `;` (o filtro de estágio é automático) |
+| `INCLUIR_JUNIOR` | `true` | Inclui vagas júnior além de estágio |
+| `GUPY_TERMOS` | 14 termos de tecnologia | Buscas de estágio na Gupy, separadas por `;` (o filtro de estágio é automático) |
+| `GUPY_TERMOS_JUNIOR` | 12 termos | Buscas de vagas júnior na Gupy (o nível é conferido pelo título) |
 
 ---
 
@@ -280,7 +282,7 @@ client.messages.create(
 
 O pitch usa o **Claude Sonnet 5.5** com raciocínio adaptativo e **fallback automático**: se o modelo recusar a solicitação, a própria API refaz a chamada num modelo de fallback (`fallbacks="default"`, beta `server-side-fallback-2026-07-01`). O Haiku 5.5 não tem fallback do lado do servidor; uma recusa na triagem vira `erro` e a vaga é tentada de novo depois.
 
-- **Elegibilidade (eliminatória):** não é estágio, exige diploma, curso incompatível, presencial/híbrido fora do RJ, período de formatura incompatível ou fora de TI → `score = 0`. A regra é aplicada **de novo no código** (`MatchResult`), mesmo que o modelo erre.
+- **Elegibilidade (eliminatória):** nível acima de júnior, exige diploma em TI, curso incompatível, presencial/híbrido fora do RJ, período de formatura incompatível (estágio) ou fora de TI → `score = 0`. O campo `nivel_vaga` (estágio/júnior/outro) aparece no painel, com filtro próprio. A regra é aplicada **de novo no código** (`MatchResult`), mesmo que o modelo erre.
 - **Score (0–100):** stack (40) + evidência em produção (25) + área (15) + requisitos acadêmicos e logísticos (10) + qualidade da vaga (10), com faixas de calibração e exemplos no prompt.
 - **Campos:** `elegivel_estagio`, `motivo_inelegibilidade`, `score`, `tecnologias_match`, `lacunas`, `projeto_portfolio_destacar`, `pitch_candidatura`, além de `justificativa` e `modalidade_detectada`.
 - **Proteção contra prompt injection:** o texto da vaga vai dentro de `<vaga>` e o modelo é instruído a ignorar instruções contidas nele.
@@ -340,7 +342,7 @@ Deduplicação, pré-filtro, análise, notificação e dashboard funcionam sem n
 pytest
 ```
 
-São 36 testes: scrapers com HTTP simulado, deduplicação, pré-filtro, request do Claude (cache, tool forçada, schema), regra de `score=0`, escape do MarkdownV2, fallback e rate limit do Telegram, e um teste ponta a ponta do orquestrador com geração do dashboard. Nenhum teste acessa a rede ou gasta tokens.
+São 42 testes: scrapers com HTTP simulado, deduplicação, pré-filtro, request do Claude (cache, tool forçada, schema), regra de `score=0`, escape do MarkdownV2, fallback e rate limit do Telegram, e um teste ponta a ponta do orquestrador com geração do dashboard. Nenhum teste acessa a rede ou gasta tokens.
 
 ---
 

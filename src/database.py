@@ -73,6 +73,7 @@ class VagaDB(Base):
     score: Mapped[int | None] = mapped_column(Integer, index=True)
     justificativa: Mapped[str | None] = mapped_column(Text)
     modalidade_detectada: Mapped[str | None] = mapped_column(String(20))
+    nivel_vaga: Mapped[str | None] = mapped_column(String(20))  # estagio | junior | outro
     tecnologias_match_json: Mapped[str] = mapped_column(Text, default="[]")
     lacunas_json: Mapped[str] = mapped_column(Text, default="[]")
     projeto_portfolio_destacar: Mapped[str | None] = mapped_column(Text)
@@ -159,7 +160,22 @@ def criar_engine(caminho: Path | str) -> Engine:
     engine = create_engine(url, future=True)
     event.listen(engine, "connect", _sqlite_pragmas)
     Base.metadata.create_all(engine)
+    _migrar_colunas(engine)
     return engine
+
+
+def _migrar_colunas(engine: Engine) -> None:
+    """Adiciona colunas novas a bancos criados por versões anteriores (create_all não altera tabelas)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    for tabela in Base.metadata.sorted_tables:
+        existentes = {c["name"] for c in insp.get_columns(tabela.name)}
+        for coluna in tabela.columns:
+            if coluna.name not in existentes:
+                tipo = coluna.type.compile(engine.dialect)
+                with engine.begin() as conn:
+                    conn.execute(text(f'ALTER TABLE {tabela.name} ADD COLUMN "{coluna.name}" {tipo}'))
 
 
 def criar_session_factory(engine: Engine) -> sessionmaker[Session]:
@@ -242,6 +258,7 @@ class Repositorio:
         row.score = resultado.score
         row.justificativa = resultado.justificativa
         row.modalidade_detectada = resultado.modalidade_detectada
+        row.nivel_vaga = resultado.nivel_vaga
         row.tecnologias_match_json = json.dumps(resultado.tecnologias_match, ensure_ascii=False)
         row.lacunas_json = json.dumps(resultado.lacunas, ensure_ascii=False)
         row.projeto_portfolio_destacar = resultado.projeto_portfolio_destacar

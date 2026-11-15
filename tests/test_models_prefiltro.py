@@ -65,3 +65,14 @@ def test_prefiltro_descarta_vaga_antiga(settings):
 def test_prefiltro_descarta_aprendiz(settings):
     ok, _ = prefiltro.avaliar(nova_vaga(titulo="Jovem Aprendiz TI"), settings)
     assert not ok
+
+
+def test_prefiltro_aceita_junior(settings):
+    assert prefiltro.avaliar(nova_vaga(titulo="Desenvolvedor Júnior Full Stack"), settings)[0]
+    assert prefiltro.avaliar(nova_vaga(titulo="Desenvolvedor Jr. React"), settings)[0]
+    assert prefiltro.avaliar(nova_vaga(titulo="Desenvolvedor Júnior ou Pleno"), settings)[0]
+
+
+def test_prefiltro_descarta_pleno(settings):
+    ok, motivo = prefiltro.avaliar(nova_vaga(titulo="Desenvolvedor Pleno React"), settings)
+    assert not ok and "pleno" in motivo

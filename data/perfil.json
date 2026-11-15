@@ -26,8 +26,12 @@
     }
   },
   "disponibilidade": {
-    "tipo_vaga": "Estágio",
-    "carga_horaria_maxima": "Até 6h/dia e 30h semanais, conforme a Lei 11.788/2008",
+    "tipos_de_vaga_aceitos": [
+      "Estágio",
+      "Júnior (CLT ou PJ)"
+    ],
+    "estagio": "Até 6h/dia e 30h semanais, conforme a Lei 11.788/2008",
+    "junior": "Jornada de vaga júnior",
     "observacao": "Turno e horário exatos não informados no currículo; não elimine vagas por turno, apenas registre como ponto a confirmar."
   },
   "preferencias": {
@@ -72,52 +76,110 @@
       "tipo": "Plataforma omnichannel de atendimento",
       "status": "Em produção na Seleto (rede de 4 lojas)",
       "descricao": "Atendimento por WhatsApp e Instagram com caixa de entrada em tempo real, distribuição por loja e vendedor, fila, comentários e pós-venda; inclui assistente de IA (Anthropic) com travas contra descontos, valores ou estoque não confirmados pelo sistema.",
-      "stack": ["Webhooks WhatsApp (Evolution API)", "Instagram Graph API", "PostgreSQL", "Anthropic API", "Integração ERP PDVNet"],
-      "destaques_tecnicos": ["Tempo real", "Controle de concorrência contra mensagens duplicadas", "Mascaramento de dados pessoais nos logs (LGPD)", "Testes de integração com PostgreSQL real"]
+      "stack": [
+        "Webhooks WhatsApp (Evolution API)",
+        "Instagram Graph API",
+        "PostgreSQL",
+        "Anthropic API",
+        "Integração ERP PDVNet"
+      ],
+      "destaques_tecnicos": [
+        "Tempo real",
+        "Controle de concorrência contra mensagens duplicadas",
+        "Mascaramento de dados pessoais nos logs (LGPD)",
+        "Testes de integração com PostgreSQL real"
+      ]
     },
     {
       "nome": "Pontes Ferreira Cálculos",
       "tipo": "Sistema ponta a ponta para escritório de cálculos trabalhistas (jurídico)",
       "status": "Em produção",
       "descricao": "Site por cidade e serviço, painel com CRM em funil, WhatsApp integrado, prospecção via Google Places, robô de e-mail e vigia com alertas no WhatsApp.",
-      "stack": ["JavaScript", "Supabase com RLS", "PostgreSQL", "9 Edge Functions em Deno", "pg_cron", "Google Ads", "GTM"],
-      "destaques_tecnicos": ["Row Level Security", "Rotinas agendadas com pg_cron", "Funções serverless em Deno"]
+      "stack": [
+        "JavaScript",
+        "Supabase com RLS",
+        "PostgreSQL",
+        "9 Edge Functions em Deno",
+        "pg_cron",
+        "Google Ads",
+        "GTM"
+      ],
+      "destaques_tecnicos": [
+        "Row Level Security",
+        "Rotinas agendadas com pg_cron",
+        "Funções serverless em Deno"
+      ]
     },
     {
       "nome": "Samba Vest",
       "tipo": "E-commerce headless",
       "status": "Em produção",
       "descricao": "Loja headless com atendente de IA no WhatsApp (Claude, com ferramentas) que consulta pedidos e estoque e monta a sacola; recuperação de vendas (Pix não pago, cartão recusado, carrinho abandonado) e agente de anúncios com saída validada por schema. Integra WooCommerce, Bling, Melhor Envio e Meta.",
-      "stack": ["Next.js 16", "TypeScript", "Anthropic API", "Zod", "Upstash Redis", "GitHub Actions", "WooCommerce", "Bling", "Melhor Envio", "Meta"],
-      "destaques_tecnicos": ["Agente de IA com ferramentas", "Saída estruturada validada por schema (Zod)", "Integrações de e-commerce, ERP e frete", "CI com GitHub Actions"]
+      "stack": [
+        "Next.js 16",
+        "TypeScript",
+        "Anthropic API",
+        "Zod",
+        "Upstash Redis",
+        "GitHub Actions",
+        "WooCommerce",
+        "Bling",
+        "Melhor Envio",
+        "Meta"
+      ],
+      "destaques_tecnicos": [
+        "Agente de IA com ferramentas",
+        "Saída estruturada validada por schema (Zod)",
+        "Integrações de e-commerce, ERP e frete",
+        "CI com GitHub Actions"
+      ]
     },
     {
       "nome": "EvoTrainer",
       "tipo": "SaaS",
       "status": "Projeto de portfólio",
       "descricao": "Treinos personalizados com IA considerando restrições físicas do aluno, com respostas validadas por schema.",
-      "stack": ["OpenAI API", "Fastify", "Next.js", "Prisma", "Docker"]
+      "stack": [
+        "OpenAI API",
+        "Fastify",
+        "Next.js",
+        "Prisma",
+        "Docker"
+      ]
     },
     {
       "nome": "AlvoLocal",
       "tipo": "B2B SaaS",
       "status": "Projeto de portfólio",
       "descricao": "Prospecção de empresas via Google Places, análise de presença digital com IA, funil Kanban e assinatura pelo Mercado Pago.",
-      "stack": ["Next.js", "OpenAI", "Google Places", "Mercado Pago"]
+      "stack": [
+        "Next.js",
+        "OpenAI",
+        "Google Places",
+        "Mercado Pago"
+      ]
     },
     {
       "nome": "Sistema Odonto",
       "tipo": "Sistema de gestão",
       "status": "Projeto de portfólio",
       "descricao": "CRM de pacientes, agendamento com lembretes por WhatsApp e prontuário.",
-      "stack": ["React", "Flask", "PostgreSQL"]
+      "stack": [
+        "React",
+        "Flask",
+        "PostgreSQL"
+      ]
     },
     {
       "nome": "Questões ENEM",
       "tipo": "Aplicação web",
       "status": "Projeto de portfólio",
       "descricao": "Banco de questões com filtros por disciplina e ano e relatório de desempenho por área.",
-      "stack": ["Next.js", "Supabase", "PostgreSQL"]
+      "stack": [
+        "Next.js",
+        "Supabase",
+        "PostgreSQL"
+      ]
     },
     {
       "nome": "Outros",
@@ -125,17 +187,73 @@
     }
   ],
   "stack_tecnica": {
-    "front_end": ["Next.js (App Router)", "React", "TypeScript", "JavaScript", "HTML5", "CSS3", "Tailwind CSS", "Zustand", "Figma"],
-    "back_end_e_dados": ["Node.js", "Fastify", "Python (Flask)", "SQL", "PostgreSQL", "Prisma", "Supabase", "Edge Functions (Deno)", "Upstash Redis"],
-    "integracoes": ["WhatsApp (Evolution API)", "Instagram Graph API", "Webhooks", "PDVNet", "NF-e (XML)", "WooCommerce", "Meta Marketing API e CAPI", "Bling", "Melhor Envio", "Mercado Pago", "Google Maps/Places", "Google Ads", "GTM", "SMTP/IMAP", "APIs RESTful"],
-    "ia": ["OpenAI API", "Anthropic API", "Agentes com ferramentas", "Saída estruturada (Zod)"],
-    "devops_e_qualidade": ["Git", "GitHub (PR e CI)", "GitHub Actions", "Vercel", "Vercel Cron", "pg_cron", "Docker", "Playwright", "Testes de integração"]
+    "front_end": [
+      "Next.js (App Router)",
+      "React",
+      "TypeScript",
+      "JavaScript",
+      "HTML5",
+      "CSS3",
+      "Tailwind CSS",
+      "Zustand",
+      "Figma"
+    ],
+    "back_end_e_dados": [
+      "Node.js",
+      "Fastify",
+      "Python (Flask)",
+      "SQL",
+      "PostgreSQL",
+      "Prisma",
+      "Supabase",
+      "Edge Functions (Deno)",
+      "Upstash Redis"
+    ],
+    "integracoes": [
+      "WhatsApp (Evolution API)",
+      "Instagram Graph API",
+      "Webhooks",
+      "PDVNet",
+      "NF-e (XML)",
+      "WooCommerce",
+      "Meta Marketing API e CAPI",
+      "Bling",
+      "Melhor Envio",
+      "Mercado Pago",
+      "Google Maps/Places",
+      "Google Ads",
+      "GTM",
+      "SMTP/IMAP",
+      "APIs RESTful"
+    ],
+    "ia": [
+      "OpenAI API",
+      "Anthropic API",
+      "Agentes com ferramentas",
+      "Saída estruturada (Zod)"
+    ],
+    "devops_e_qualidade": [
+      "Git",
+      "GitHub (PR e CI)",
+      "GitHub Actions",
+      "Vercel",
+      "Vercel Cron",
+      "pg_cron",
+      "Docker",
+      "Playwright",
+      "Testes de integração"
+    ]
   },
   "certificacoes_e_atividades": [
     "JavaScript, React, Estruturação de Bancos de Dados e TypeScript; mais de 10 certificados na plataforma DIO.",
     "Atuação como freelancer no desenvolvimento de sites, landing pages responsivas e integrações web."
   ],
-  "soft_skills": ["Liderança de equipe", "Atendimento ao cliente", "Resolução de conflitos", "Foco no problema do negócio"],
+  "soft_skills": [
+    "Liderança de equipe",
+    "Atendimento ao cliente",
+    "Resolução de conflitos",
+    "Foco no problema do negócio"
+  ],
   "diferenciais": [
     "Sistemas reais em produção em 3 negócios (varejo com 4 lojas, jurídico e e-commerce), não apenas projetos de curso.",
     "Experiência ponta a ponta: banco de dados, back-end, front-end, integrações com ERP e APIs da Meta, rotinas agendadas e deploy contínuo.",

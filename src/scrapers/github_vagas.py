@@ -24,6 +24,7 @@ POR_PAGINA = 100
 MAX_PAGINAS = 5
 
 RE_ESTAGIO = re.compile(r"\b(estagi\w*|intern|internship)\b")
+RE_JUNIOR = re.compile(r"\b(junior|jr)\b")
 RE_EMPRESA = re.compile(r"(?:\s@\s*|\s(?:na|no|at|em)\s+)([^\[\]\(\)|@]{2,60})$", re.IGNORECASE)
 RE_PREFIXO_COLCHETES = re.compile(r"^\s*(\[[^\]]*\]\s*)+")
 
@@ -96,11 +97,12 @@ class GitHubVagasScraper(JobScraper):
                     "Defina GITHUB_TOKEN para ter 5.000 req/h."
                 )
 
-    def eh_estagio(self, issue: dict) -> bool:
-        labels = [normalizar_texto(lbl.get("name", "")) for lbl in issue.get("labels", [])]
-        if any(RE_ESTAGIO.search(lbl) for lbl in labels):
-            return True
-        return bool(RE_ESTAGIO.search(normalizar_texto(issue.get("title", ""))))
+    def eh_nivel_aceito(self, issue: dict) -> bool:
+        """Estágio sempre; Júnior quando INCLUIR_JUNIOR (padrão). Olha labels e título."""
+        padroes = [RE_ESTAGIO] + ([RE_JUNIOR] if self.settings.incluir_junior else [])
+        textos = [normalizar_texto(lbl.get("name", "")) for lbl in issue.get("labels", [])]
+        textos.append(normalizar_texto(issue.get("title", "")))
+        return any(rx.search(t) for rx in padroes for t in textos)
 
     def normalizar(self, repo: str, issue: dict) -> Vaga:
         labels = [lbl.get("name", "") for lbl in issue.get("labels", [])]
@@ -150,7 +152,7 @@ class GitHubVagasScraper(JobScraper):
                 criada = parse_data_iso(issue.get("created_at"))
                 if criada and criada < desde:
                     continue
-                if self.eh_estagio(issue):
+                if self.eh_nivel_aceito(issue):
                     yield self.normalizar(repo, issue)
 
             if len(issues) < POR_PAGINA:
@@ -163,7 +165,7 @@ class GitHubVagasScraper(JobScraper):
                 for vaga in self.coletar_repo(repo):
                     encontradas += 1
                     yield vaga
-                log.info("[github] %s: %d vaga(s) de estágio", repo, encontradas)
+                log.info("[github] %s: %d vaga(s) de estágio/júnior", repo, encontradas)
             except ScraperError as exc:
                 self.registrar_erro(f"{repo}: {exc}")
             except Exception as exc:  # noqa: BLE001
