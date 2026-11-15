@@ -192,8 +192,9 @@ exigem residir em outro país ou outro estado específico são incompatíveis.
 candidato está antes). Se o requisito for vago, NÃO elimine; registre como lacuna.
 6. A vaga não é da área de tecnologia/desenvolvimento (ex.: estágio administrativo, vendas, \
 marketing sem componente técnico, suporte presencial de hardware).
-NÃO elimine vaga júnior por tempo de experiência exigido: registre como lacuna e aplique o teto da \
-Etapa 2. Se a modalidade ou a localização não estiverem informadas, NÃO elimine por isso: assuma \
+Somente as 6 condições acima eliminam. Stack ou linguagem diferente do perfil (ex.: Java, COBOL, \
+.NET) NUNCA torna a vaga inelegível: registre como lacuna e reflita no score da Etapa 2. NÃO elimine \
+vaga júnior por tempo de experiência exigido: registre como lacuna e aplique o teto da Etapa 2. Se a modalidade ou a localização não estiverem informadas, NÃO elimine por isso: assuma \
 que pode ser compatível, use `modalidade_detectada = "nao_informado"` e cite a incerteza.
 
 # Etapa 2 — Score de aderência (somente se elegível)

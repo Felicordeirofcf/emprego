@@ -25,7 +25,7 @@ MAX_PAGINAS = 5
 
 RE_ESTAGIO = re.compile(r"\b(estagi\w*|intern|internship)\b")
 RE_JUNIOR = re.compile(r"\b(junior|jr)\b")
-RE_EMPRESA = re.compile(r"(?:\s@\s*|\s(?:na|no|at|em)\s+)([^\[\]\(\)|@]{2,60})$", re.IGNORECASE)
+RE_EMPRESA = re.compile(r"(?:\s@\s*|\s(?:na|no|at|em)\s+|\s[-–—|]\s+)([^\[\]\(\)|@\-–—]{2,60})$", re.IGNORECASE)
 RE_PREFIXO_COLCHETES = re.compile(r"^\s*(\[[^\]]*\]\s*)+")
 
 
