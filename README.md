@@ -1,5 +1,7 @@
 # 🤖 Robô de Vagas de Estágio em Tecnologia (Claude API)
 
+📊 **Dashboard:** https://felicordeirofcf.github.io/emprego/ · ⚙️ **Execuções:** [aba Actions](https://github.com/Felicordeirofcf/emprego/actions)
+
 Robô que **coleta vagas de estágio** (GitHub e Gupy), **compara cada vaga com o seu currículo e portfólio** usando a API do Claude, calcula um **score de compatibilidade de 0 a 100**, **avisa no Telegram** só as melhores e mantém um **dashboard de acompanhamento** das suas candidaturas.
 
 - **Só estágio:** vagas Júnior/Pleno/Sênior, que exigem diploma ou que são presenciais/híbridas fora do RJ ficam com `elegivel_estagio: false` e `score: 0`.
