@@ -1,17 +1,24 @@
-"""Coletor da API pública de busca do portal da Gupy (portal.gupy.io).
+"""Coletor da busca pública do portal da Gupy (portal.gupy.io).
 
-Endpoint: GET https://portal.api.gupy.io/api/v1/jobs?jobName=<termo>&limit=<n>&offset=<n>
-Resposta: {"data": [{id, name, careerPageName, description, type, workplaceType,
-           isRemoteWork, city, state, country, jobUrl, publishedDate, ...}],
-           "pagination": {"offset", "limit", "total"}}
+Em out/2026 a Gupy desligou os hosts antigos (portal.api.gupy.io e
+employability-portal.gupy.io: 404 em todos os caminhos). O endpoint atual é o mesmo
+que a busca do próprio portal usa — não é documentado e pode mudar sem aviso:
 
-O campo ``type`` identifica o nível ("vacancy_type_internship" = estágio,
-"vacancy_type_apprentice" = jovem aprendiz, "vacancy_type_effective" = CLT...).
+    GET https://portal.gupy.io/api/job-search/jobs?jobName=<termo>&type=<tipo>&limit=<n>&offset=<n>
+
+- ``limit`` vai até 100 (101 devolve 400); ``offset`` >= 10000 devolve 400.
+- Resposta: {"data": [{id, name, careerPageName, description, type, workplaceType,
+  city, state, jobUrl|url, publishedDate, ...}], "pagination": {"offset", "limit", "total"}}
+  (os campos isRemoteWork, country e companyId deixaram de existir: o remoto vem de
+  workplaceType). Resultados do mais novo para o mais antigo.
+- ``type`` identifica o nível ("vacancy_type_internship" = estágio,
+  "vacancy_type_apprentice" = jovem aprendiz, "vacancy_type_effective" = CLT...).
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from typing import Iterable
 
 from ..models import Vaga, normalizar_texto
@@ -19,11 +26,12 @@ from .base import HttpClient, JobScraper, ScraperError, parse_data_iso
 
 log = logging.getLogger(__name__)
 
-API = "https://portal.api.gupy.io/api/v1/jobs"
-LIMITE = 50
-MAX_PAGINAS = 4
+API = "https://portal.gupy.io/api/job-search/jobs"
+LIMITE = 100  # máximo aceito pelo servidor
+MAX_PAGINAS = 3
 
 TIPO_ESTAGIO = "vacancy_type_internship"
+RE_CONFIDENCIAL = re.compile(r"^(?:empresa\s+)?confidencial$", re.IGNORECASE)
 MAPA_MODALIDADE = {"remote": "remoto", "hybrid": "hibrido", "on-site": "presencial", "onsite": "presencial"}
 
 
@@ -55,7 +63,7 @@ class GupyScraper(JobScraper):
         estado = (item.get("state") or "").strip()
         localizacao = " - ".join(p for p in (cidade, estado) if p) or None
 
-        url = item.get("jobUrl") or ""
+        url = item.get("jobUrl") or item.get("url") or ""
         if not url and item.get("careerPageUrl") and item.get("id"):
             url = f"{item['careerPageUrl'].rstrip('/')}/jobs/{item['id']}"
 
@@ -63,7 +71,7 @@ class GupyScraper(JobScraper):
             fonte="gupy",
             url=url,
             titulo=(item.get("name") or "").strip(),
-            empresa=(item.get("careerPageName") or None),
+            empresa=_empresa(item.get("careerPageName")),
             descricao=(item.get("description") or "").strip(),
             localizacao=localizacao,
             modalidade=modalidade,
@@ -73,11 +81,21 @@ class GupyScraper(JobScraper):
         )
 
     def buscar_termo(self, termo: str) -> Iterable[Vaga]:
+        filtrar_tipo = True  # pede só estágio ao servidor; se ele recusar o filtro, filtra localmente
         for pagina in range(MAX_PAGINAS):
             offset = pagina * LIMITE
-            resp = self.http.get(API, params={"jobName": termo, "limit": LIMITE, "offset": offset})
+            params = {"jobName": termo, "limit": LIMITE, "offset": offset}
+            if filtrar_tipo:
+                params["type"] = TIPO_ESTAGIO
+            resp = self.http.get(API, params=params)
+            if resp.status_code == 400 and filtrar_tipo:
+                log.warning("[gupy] filtro type recusado (400); repetindo sem ele e filtrando localmente")
+                filtrar_tipo = False
+                params.pop("type")
+                resp = self.http.get(API, params=params)
             if resp.status_code >= 400:
-                raise ScraperError(f"HTTP {resp.status_code} ao buscar '{termo}' na Gupy")
+                trecho = resp.text[:200].replace("\n", " ")
+                raise ScraperError(f"HTTP {resp.status_code} ao buscar '{termo}' na Gupy ({API}): {trecho}")
             try:
                 payload = resp.json()
             except ValueError as exc:
@@ -107,3 +125,10 @@ class GupyScraper(JobScraper):
                 self.registrar_erro(str(exc))
             except Exception as exc:  # noqa: BLE001
                 self.registrar_erro(f"'{termo}': {exc.__class__.__name__}: {exc}")
+
+
+def _empresa(nome: str | None) -> str | None:
+    nome = (nome or "").strip()
+    if not nome or RE_CONFIDENCIAL.match(nome):
+        return None  # vaga de empresa confidencial
+    return nome

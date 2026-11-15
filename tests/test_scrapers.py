@@ -74,19 +74,25 @@ def test_gupy_filtra_tipo_e_normaliza(settings):
              "jobUrl": "https://c.gupy.io/jobs/12"},
             {"id": 13, "name": "Estágio Dev Python", "careerPageName": "Empresa D", "description": "Python",
              "type": "vacancy_type_internship", "workplaceType": "hybrid", "city": "Rio de Janeiro",
-             "state": "Rio de Janeiro", "jobUrl": "https://d.gupy.io/jobs/13", "publishedDate": _recente()},
+             "state": "Rio de Janeiro", "url": "https://d.gupy.io/jobs/13", "publishedDate": _recente()},
+            {"id": 14, "name": "Estágio em TI", "careerPageName": "Confidencial", "description": "",
+             "type": "vacancy_type_internship", "workplaceType": "remote", "url": "https://e.gupy.io/jobs/14",
+             "publishedDate": _recente()},
         ],
         "pagination": {"offset": 0, "limit": 50, "total": 4},
     }
     termos_vistos = []
 
     def handler(req):
+        assert req.url.host == "portal.gupy.io" and req.url.path == "/api/job-search/jobs"
+        assert req.url.params["type"] == "vacancy_type_internship" and req.url.params["limit"] == "100"
         termos_vistos.append(req.url.params["jobName"])
         return httpx.Response(200, json=pagina)
 
     res = GupyScraper(settings, http=_http(handler)).executar()
     assert res.erros == []
-    assert {v.id_externo for v in res.vagas} == {"10", "13"}  # deduplicado entre termos
+    assert {v.id_externo for v in res.vagas} == {"10", "13", "14"}  # deduplicado entre termos
+    assert next(v for v in res.vagas if v.id_externo == "14").empresa is None  # confidencial
     d = next(v for v in res.vagas if v.id_externo == "13")
     assert d.modalidade == "hibrido" and d.localizacao == "Rio de Janeiro - Rio de Janeiro"
     assert len(termos_vistos) == len(settings.gupy_termos)
@@ -95,3 +101,23 @@ def test_gupy_filtra_tipo_e_normaliza(settings):
 def test_gupy_erro_http_registrado(settings):
     res = GupyScraper(settings, http=_http(lambda req: httpx.Response(403, text="forbidden"))).executar()
     assert res.vagas == [] and len(res.erros) == len(settings.gupy_termos)
+
+
+def test_gupy_sem_filtro_type_quando_servidor_recusa(settings):
+    chamadas = []
+
+    def handler(req):
+        chamadas.append(dict(req.url.params))
+        if "type" in req.url.params:
+            return httpx.Response(400, json={"message": "invalid type"})
+        return httpx.Response(200, json={"data": [
+            {"id": 1, "name": "Estágio Dev", "careerPageName": "A", "type": "vacancy_type_internship",
+             "workplaceType": "remote", "url": "https://a.gupy.io/jobs/1", "publishedDate": _recente()},
+            {"id": 2, "name": "Dev Pleno", "careerPageName": "B", "type": "vacancy_type_effective",
+             "workplaceType": "remote", "url": "https://b.gupy.io/jobs/2", "publishedDate": _recente()},
+        ], "pagination": {"offset": 0, "limit": 100, "total": 2}})
+
+    s = __import__("dataclasses").replace(settings, gupy_termos=["estágio"])
+    res = GupyScraper(s, http=_http(handler)).executar()
+    assert [v.id_externo for v in res.vagas] == ["1"] and res.erros == []
+    assert "type" in chamadas[0] and "type" not in chamadas[1]
